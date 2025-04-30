@@ -74,7 +74,41 @@ class IAEApp(tk.Tk):
         messagebox.showinfo("Not Implemented", "This feature is not yet implemented.")
 
     def _show_manual(self):
-        messagebox.showinfo("User Manual", "To be added: How to use the IAE system.")
+        manual_window = tk.Toplevel(self)
+        manual_window.title("User Manual")
+        manual_window.geometry("600x500")
+
+        manual_text = tk.Text(manual_window, wrap="word", font=("Segoe UI", 11))
+        manual_text.pack(expand=True, fill="both", padx=10, pady=10)
+
+        manual_text.insert("1.0", """Welcome to the Integrated Assignment Environment (IAE)!
+
+This guide will help you understand how to use the application step by step.
+
+1. PROJECT TAB
+- Enter a project name.
+- Select a configuration JSON file (or create one from the Configuration tab).
+- Choose the folder containing student ZIP submissions.
+- Specify the input file and expected output file.
+
+2. CONFIGURATION TAB
+- Choose a language: C, Java, or Python.
+- Enter the compile and run commands.
+- Specify how input will be passed (arguments or stdin).
+- Click 'Save Configuration' to export a JSON file.
+
+3. TEST TAB
+- Click 'Run All Tests' to start processing all student submissions.
+- The table will display compile status, runtime result, and final comparison.
+- Results are shown in real-time.
+
+TIPS:
+- Use 'File > Save' to store the current project setup.
+- You can open saved projects from 'File > Open'.
+- For help or updates, check the 'About' section.
+
+""")
+        manual_text.configure(state="disabled")
 
     def _show_about(self):
         messagebox.showinfo("About", "Integrated Assignment Environment v1.0")
