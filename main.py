@@ -28,8 +28,9 @@ class IAEApp(tk.Tk):
         self.nav_frame = tk.Frame(self, width=200, bg="#e0e0e0")
         self.nav_frame.grid(row=0, column=0, sticky="ns")
 
-        self.container = tk.Frame(self, bg=BG_COLOR)
+        self.container = tk.Frame(self, bg="blue", width=800, height=600)
         self.container.grid(row=0, column=1, sticky="nsew")
+        self.container.pack_propagate(False)
 
         # Frame sınıfları ve isimleri eşleşiyor
         self.frames = {}
@@ -120,11 +121,16 @@ TIPS:
 class ProjectFrame(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent, bg=BG_COLOR)
-        self.columnconfigure(1, weight=1)
+
+        tk.Label(self, text="Project Page", font=("Arial", 16), bg=BG_COLOR).pack(pady=20)
+
         labels = ["Project Name", "Select Config File", "ZIP Folder", "Input File", "Expected Output File"]
-        for i, text in enumerate(labels):
-            tk.Label(self, text=text, bg=BG_COLOR, font=FONT).grid(row=i, column=0, padx=20, pady=15, sticky="e")
-            ttk.Entry(self, width=40).grid(row=i, column=1, padx=10, pady=10, sticky="w")
+        for text in labels:
+            row = tk.Frame(self, bg=BG_COLOR)
+            row.pack(fill="x", padx=20, pady=8)
+
+            tk.Label(row, text=text, font=FONT, bg=BG_COLOR, width=20, anchor="e").pack(side="left")
+            ttk.Entry(row, width=40).pack(side="left", padx=10)
 
 # === Configuration Section ===
 class ConfigFrame(tk.Frame):
@@ -172,3 +178,4 @@ class TestFrame(tk.Frame):
 if __name__ == "__main__":
     app = IAEApp()
     app.mainloop()
+
