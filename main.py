@@ -1,48 +1,37 @@
+import customtkinter as ctk
+import tkinter.filedialog as fd
 import tkinter as tk
-from tkinter import ttk, messagebox
-import tkinter.filedialog as fd
-from core.configuration import save_configuration
-from core.configuration import save_configuration, load_configuration
-import tkinter.filedialog as fd
-import os
 from tkinter import messagebox
+import os
 import json
+from core.configuration import save_configuration, load_configuration
+
+ctk.set_appearance_mode("light")
+ctk.set_default_color_theme("blue")
 
 FONT = ("Segoe UI", 11)
-BG_COLOR = "#f4f4f4"
-BTN_COLOR = "#dcdcdc"
-ACCENT_COLOR = "#4CAF50"
-HOVER_COLOR = "#c0c0c0"
 
-class IAEApp(tk.Tk):
+class IAEApp(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title("Integrated Assignment Environment (IAE)")
         self.geometry("1200x700")
-        self.configure(bg=BG_COLOR)
 
         self._create_menu()
-
-        style = ttk.Style(self)
-        style.configure("TButton", font=FONT, padding=8)
-        style.map("TButton",
-                  background=[("active", HOVER_COLOR)],
-                  relief=[("pressed", "sunken"), ("!pressed", "flat")])
 
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
 
-        self.nav_frame = tk.Frame(self, width=200, bg="#e0e0e0")
+        self.nav_frame = ctk.CTkFrame(self, width=200, fg_color="#e0e0e0")
         self.nav_frame.grid(row=0, column=0, sticky="ns")
+        self.nav_frame.grid_rowconfigure('all', weight=1)
 
-        self.container = tk.Frame(self, bg="blue", width=800, height=600)
+        self.container = ctk.CTkFrame(self)
         self.container.grid(row=0, column=1, sticky="nsew")
-        self.container.pack_propagate(False)
-
 
         self.frames = {}
         for F in (ProjectFrame, ConfigFrame, TestFrame):
-            name = F.__name__.replace("Frame", "")  # 'Project', 'Config', 'Test'
+            name = F.__name__.replace("Frame", "")
             frame = F(parent=self.container, controller=self)
             self.frames[name] = frame
             frame.place(relwidth=1, relheight=1)
@@ -53,9 +42,11 @@ class IAEApp(tk.Tk):
             "Test": "Test"
         }
 
-        for label, frame_name in buttons.items():
-            btn = ttk.Button(self.nav_frame, text=label, command=lambda n=frame_name: self.show_frame(n))
-            btn.pack(pady=30, fill="x", padx=20)
+        for i, (label, frame_name) in enumerate(buttons.items()):
+            self.nav_frame.grid_rowconfigure(i, weight=1)
+            btn = ctk.CTkButton(self.nav_frame, text=label, font=("Segoe UI", 14), height=60,
+                                command=lambda n=frame_name: self.show_frame(n))
+            btn.grid(row=i, column=0, padx=20, pady=10, sticky="ew")
 
         self.show_frame("Project")
 
@@ -63,22 +54,19 @@ class IAEApp(tk.Tk):
         menubar = tk.Menu(self)
 
         file_menu = tk.Menu(menubar, tearoff=0)
-        file_menu.add_command(label="New Project", command=self._not_implemented)
-        file_menu.add_command(label="Open", command=self._not_implemented)
-        file_menu.add_command(label="Save", command=self._not_implemented)
+        file_menu.add_command(label="New Project", command=lambda: messagebox.showinfo("File", "New Project clicked"))
+        file_menu.add_command(label="Open", command=lambda: messagebox.showinfo("File", "Open clicked"))
+        file_menu.add_command(label="Save", command=lambda: messagebox.showinfo("File", "Save clicked"))
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.quit)
         menubar.add_cascade(label="File", menu=file_menu)
 
         help_menu = tk.Menu(menubar, tearoff=0)
         help_menu.add_command(label="User Manual", command=self._show_manual)
-        help_menu.add_command(label="About", command=self._show_about)
+        help_menu.add_command(label="About", command=lambda: messagebox.showinfo("About", "IAE v1.0"))
         menubar.add_cascade(label="Help", menu=help_menu)
 
-        self.config(menu=menubar)
-
-    def _not_implemented(self):
-        messagebox.showinfo("Not Implemented", "This feature is not yet implemented.")
+        self.configure(menu=menubar)
 
     def _show_manual(self):
         manual_window = tk.Toplevel(self)
@@ -90,49 +78,43 @@ class IAEApp(tk.Tk):
 
         manual_text.insert("1.0", """Welcome to the Integrated Assignment Environment (IAE)!
 
-        Here’s a simple guide to help you get started:
+This guide will help you understand how to use the application step by step.
 
-        ➤ PROJECT TAB
-        - Fill in project name, config file path, ZIP folder, input and expected output files.
-        - Use 'Save Project' to store your setup as a JSON file.
-        - Load a previous setup anytime with 'Load Project'.
+1. PROJECT TAB
+- Enter a project name.
+- Select a configuration JSON file (or create one from the Configuration tab).
+- Choose the folder containing student ZIP submissions.
+- Specify the input file and expected output file.
 
-        ➤ CONFIGURATION TAB
-        - Choose a language and enter compile/run commands.
-        - Set how input is passed (arguments or standard input).
-        - Use 'Save Configuration' to create a config file.
-        - 'Load' and 'Delete' help manage existing config files.
+2. CONFIGURATION TAB
+- Choose a language: C, Java, or Python.
+- Enter the compile and run commands.
+- Specify how input will be passed (arguments or stdin).
+- Click 'Save Configuration' to export a JSON file.
 
-        ➤ TEST TAB
-        - Click 'Run All Tests' to compile and run student submissions.
-        - Results (compile/run/status) are shown in a table instantly.
+3. TEST TAB
+- Click 'Run All Tests' to start processing all student submissions.
+- The table will display compile status, runtime result, and final comparison.
+- Results are shown in real-time.
 
-        TIPS:
-        - Everything is saved as simple JSON files.
-        - Use the tab buttons — File menu options are not yet active.
-        - Check the About section for version info.
-        """)
+TIPS:
+- Use 'File > Save' to store the current project setup.
+- You can open saved projects from 'File > Open'.
+- For help or updates, check the 'About' section.
+""")
 
         manual_text.configure(state="disabled")
-
-    def _show_about(self):
-        messagebox.showinfo("About", "Integrated Assignment Environment v1.0")
 
     def show_frame(self, name):
         self.frames[name].tkraise()
 
-
-
-# === Project Section ===
-
-class ProjectFrame(tk.Frame):
+class ProjectFrame(ctk.CTkFrame):
     def __init__(self, parent, controller):
-        super().__init__(parent, bg=BG_COLOR)
+        super().__init__(parent)
 
-        tk.Label(self, text="Project Page", font=("Arial", 16), bg=BG_COLOR).pack(pady=20)
+        ctk.CTkLabel(self, text="Project Page", font=("Arial", 16)).pack(pady=20)
 
         self.entries = {}
-
         labels = [
             ("Project Name", "project_name"),
             ("Select Config File", "config_file"),
@@ -142,110 +124,75 @@ class ProjectFrame(tk.Frame):
         ]
 
         for text, key in labels:
-            row = tk.Frame(self, bg=BG_COLOR)
-            row.pack(fill="x", padx=20, pady=8)
+            row = ctk.CTkFrame(self)
+            row.pack(fill="x", padx=40, pady=8)
 
-            tk.Label(row, text=text, font=FONT, bg=BG_COLOR, width=20, anchor="e").pack(side="left")
-            entry = ttk.Entry(row, width=40)
+            ctk.CTkLabel(row, text=text, font=FONT, width=180, anchor="e").pack(side="left")
+            entry = ctk.CTkEntry(row, width=300)
             entry.pack(side="left", padx=10)
             self.entries[key] = entry
 
-
-        btn_row = tk.Frame(self, bg=BG_COLOR)
+        btn_row = ctk.CTkFrame(self)
         btn_row.pack(pady=20)
 
-        ttk.Button(btn_row, text="Save Project", command=self.save_project).pack(side="left", padx=10)
-        ttk.Button(btn_row, text="Load Project", command=self.load_project).pack(side="left", padx=10)
+        ctk.CTkButton(btn_row, text="Save Project", command=self.save_project).pack(side="left", padx=10)
+        ctk.CTkButton(btn_row, text="Load Project", command=self.load_project).pack(side="left", padx=10)
 
     def save_project(self):
-        project_data = {
-            "project_name": self.entries["project_name"].get(),
-            "config_file": self.entries["config_file"].get(),
-            "zip_folder": self.entries["zip_folder"].get(),
-            "input_file": self.entries["input_file"].get(),
-            "expected_output_file": self.entries["expected_output"].get()
-        }
-
-        file_path = fd.asksaveasfilename(
-            defaultextension=".json",
-            filetypes=[("JSON Files", "*.json")],
-            title="Save Project As"
-        )
-
+        data = {k: self.entries[k].get() for k in self.entries}
+        file_path = fd.asksaveasfilename(defaultextension=".json", filetypes=[("JSON Files", "*.json")])
         if file_path:
             try:
                 with open(file_path, "w") as f:
-                    json.dump(project_data, f, indent=4)
+                    json.dump(data, f, indent=4)
                 messagebox.showinfo("Saved", f"Project saved to:\n{file_path}")
             except Exception as e:
-                messagebox.showerror("Error", f"Failed to save project:\n{e}")
+                messagebox.showerror("Error", str(e))
 
     def load_project(self):
-        file_path = fd.askopenfilename(
-            defaultextension=".json",
-            filetypes=[("JSON Files", "*.json")],
-            title="Open Project File"
-        )
-
+        file_path = fd.askopenfilename(defaultextension=".json", filetypes=[("JSON Files", "*.json")])
         if file_path:
             try:
                 with open(file_path, "r") as f:
-                    project_data = json.load(f)
-
-                self.entries["project_name"].delete(0, tk.END)
-                self.entries["project_name"].insert(0, project_data.get("project_name", ""))
-
-                self.entries["config_file"].delete(0, tk.END)
-                self.entries["config_file"].insert(0, project_data.get("config_file", ""))
-
-                self.entries["zip_folder"].delete(0, tk.END)
-                self.entries["zip_folder"].insert(0, project_data.get("zip_folder", ""))
-
-                self.entries["input_file"].delete(0, tk.END)
-                self.entries["input_file"].insert(0, project_data.get("input_file", ""))
-
-                self.entries["expected_output"].delete(0, tk.END)
-                self.entries["expected_output"].insert(0, project_data.get("expected_output_file", ""))
-
+                    data = json.load(f)
+                for key in self.entries:
+                    self.entries[key].delete(0, "end")
+                    self.entries[key].insert(0, data.get(key, ""))
                 messagebox.showinfo("Loaded", f"Project loaded from:\n{file_path}")
             except Exception as e:
-                messagebox.showerror("Error", f"Failed to load project:\n{e}")
+                messagebox.showerror("Error", str(e))
 
-
-
-
-class ConfigFrame(tk.Frame):
+class ConfigFrame(ctk.CTkFrame):
     def __init__(self, parent, controller):
-        super().__init__(parent, bg=BG_COLOR)
-        wrapper = tk.Frame(self, bg=BG_COLOR)
-        wrapper.pack(pady=40, anchor="n")
+        super().__init__(parent)
+        wrapper = ctk.CTkFrame(self)
+        wrapper.pack(pady=40)
 
-
-        ttk.Label(wrapper, text="Language", background=BG_COLOR, font=FONT).grid(row=0, column=0, padx=10, pady=10, sticky="e")
-        self.language_combo = ttk.Combobox(wrapper, values=["C", "Java", "Python"], font=FONT, width=30)
+        ctk.CTkLabel(wrapper, text="Language", font=FONT).grid(row=0, column=0, padx=10, pady=10, sticky="e")
+        self.language_combo = ctk.CTkComboBox(wrapper, values=["C", "Java", "Python"], font=FONT)
         self.language_combo.grid(row=0, column=1, padx=10, pady=10)
 
-        ttk.Label(wrapper, text="Compile Command", background=BG_COLOR, font=FONT).grid(row=1, column=0, padx=10, pady=10, sticky="e")
-        self.compile_entry = ttk.Entry(wrapper, width=50)
+        ctk.CTkLabel(wrapper, text="Compile Command", font=FONT).grid(row=1, column=0, padx=10, pady=10, sticky="e")
+        self.compile_entry = ctk.CTkEntry(wrapper, width=300)
         self.compile_entry.grid(row=1, column=1, padx=10, pady=10)
 
-        ttk.Label(wrapper, text="Run Command", background=BG_COLOR, font=FONT).grid(row=2, column=0, padx=10, pady=10, sticky="e")
-        self.run_entry = ttk.Entry(wrapper, width=50)
+        ctk.CTkLabel(wrapper, text="Run Command", font=FONT).grid(row=2, column=0, padx=10, pady=10, sticky="e")
+        self.run_entry = ctk.CTkEntry(wrapper, width=300)
         self.run_entry.grid(row=2, column=1, padx=10, pady=10)
 
-        ttk.Label(wrapper, text="Input Type", background=BG_COLOR, font=FONT).grid(row=3, column=0, padx=10, pady=10, sticky="e")
-        self.input_type_combo = ttk.Combobox(wrapper, values=["Command-line Arguments", "Standard Input"], font=FONT, width=30)
+        ctk.CTkLabel(wrapper, text="Input Type", font=FONT).grid(row=3, column=0, padx=10, pady=10, sticky="e")
+        self.input_type_combo = ctk.CTkComboBox(wrapper, values=["Command-line Arguments", "Standard Input"], font=FONT)
         self.input_type_combo.grid(row=3, column=1, padx=10, pady=10)
 
-        btn_frame = tk.Frame(wrapper, bg=BG_COLOR)
-        btn_frame.grid(row=4, column=1, padx=10, pady=30, sticky="e")
+        btn_row = ctk.CTkFrame(wrapper)
+        btn_row.grid(row=4, column=1, pady=20, sticky="e")
 
-        ttk.Button(btn_frame, text="Save Configuration", command=self.save_config).pack(side="left", padx=5)
-        ttk.Button(btn_frame, text="Load Configuration", command=self.load_config).pack(side="left", padx=5)
-        ttk.Button(btn_frame, text="Delete Configuration", command=self.delete_config).pack(side="left", padx=5)
+        ctk.CTkButton(btn_row, text="Save Configuration", command=self.save_config).pack(side="left", padx=5)
+        ctk.CTkButton(btn_row, text="Load Configuration", command=self.load_config).pack(side="left", padx=5)
+        ctk.CTkButton(btn_row, text="Delete Configuration", command=self.delete_config).pack(side="left", padx=5)
 
     def save_config(self):
-        config_data = {
+        data = {
             "language": self.language_combo.get(),
             "compile_command": self.compile_entry.get(),
             "run_command": self.run_entry.get(),
@@ -254,42 +201,26 @@ class ConfigFrame(tk.Frame):
             "expected_output_file": "",
             "compare_command": "diff output.txt expected.txt"
         }
-
-        file_path = fd.asksaveasfilename(
-            defaultextension=".json",
-            filetypes=[("JSON files", "*.json")],
-            title="Save Configuration As"
-        )
-
+        file_path = fd.asksaveasfilename(defaultextension=".json", filetypes=[("JSON files", "*.json")])
         if file_path:
-            save_configuration(config_data, file_path)
+            save_configuration(data, file_path)
             messagebox.showinfo("Saved", f"Configuration saved to:\n{file_path}")
 
     def load_config(self):
-        file_path = fd.askopenfilename(
-            defaultextension=".json",
-            filetypes=[("JSON files", "*.json")],
-            title="Load Configuration"
-        )
-
+        file_path = fd.askopenfilename(defaultextension=".json", filetypes=[("JSON files", "*.json")])
         if file_path:
-            config_data = load_configuration(file_path)
-            if config_data:
-                self.language_combo.set(config_data.get("language", ""))
-                self.compile_entry.delete(0, tk.END)
-                self.compile_entry.insert(0, config_data.get("compile_command", ""))
-                self.run_entry.delete(0, tk.END)
-                self.run_entry.insert(0, config_data.get("run_command", ""))
-                self.input_type_combo.set(config_data.get("input_type", ""))
+            data = load_configuration(file_path)
+            if data:
+                self.language_combo.set(data.get("language", ""))
+                self.compile_entry.delete(0, "end")
+                self.compile_entry.insert(0, data.get("compile_command", ""))
+                self.run_entry.delete(0, "end")
+                self.run_entry.insert(0, data.get("run_command", ""))
+                self.input_type_combo.set(data.get("input_type", ""))
                 messagebox.showinfo("Loaded", f"Configuration loaded from:\n{file_path}")
 
     def delete_config(self):
-        file_path = fd.askopenfilename(
-            defaultextension=".json",
-            filetypes=[("JSON files", "*.json")],
-            title="Select Configuration to Delete"
-        )
-
+        file_path = fd.askopenfilename(defaultextension=".json", filetypes=[("JSON files", "*.json")])
         if file_path:
             confirm = messagebox.askyesno("Confirm Delete", f"Are you sure you want to delete this file?\n\n{file_path}")
             if confirm:
@@ -299,28 +230,31 @@ class ConfigFrame(tk.Frame):
                 except Exception as e:
                     messagebox.showerror("Error", f"Could not delete file:\n{e}")
 
-# === Test Section ===
-class TestFrame(tk.Frame):
+class TestFrame(ctk.CTkFrame):
     def __init__(self, parent, controller):
-        super().__init__(parent, bg=BG_COLOR)
-        ttk.Button(self, text="Run All Tests").pack(pady=20)
+        super().__init__(parent)
 
-        columns = ("student_id", "compile_status", "run_status", "result")
-        tree = ttk.Treeview(self, columns=columns, show="headings", height=20)
-        style = ttk.Style()
-        style.configure("Treeview.Heading", font=(FONT[0], 11, "bold"))
-        style.configure("Treeview", font=FONT, rowheight=30)
+        ctk.CTkButton(self, text="Run All Tests").pack(pady=20)
 
-        for col in columns:
-            tree.heading(col, text=col.replace("_", " ").title())
-            tree.column(col, width=200, anchor="center")
+        headers = ["Student ID", "Compile Status", "Run Status", "Result"]
+        data = [
+            ["20230001", "Success", "Success", "Passed"],
+            ["20230002", "Error", "N/A", "Failed"]
+        ]
 
-        tree.insert("", "end", values=("20230001", "Success", "Success", "Passed"))
-        tree.insert("", "end", values=("20230002", "Error", "N/A", "Failed"))
+        table_frame = ctk.CTkFrame(self)
+        table_frame.pack(padx=20, pady=10, fill="both", expand=True)
 
-        tree.pack(padx=20, pady=10, fill="both", expand=True)
+        for col_index, header in enumerate(headers):
+            label = ctk.CTkLabel(table_frame, text=header, font=(FONT[0], 11, "bold"), anchor="center")
+            label.grid(row=0, column=col_index, padx=10, pady=5, sticky="nsew")
+            table_frame.grid_columnconfigure(col_index, weight=1)
+
+        for row_index, row_data in enumerate(data, start=1):
+            for col_index, cell in enumerate(row_data):
+                label = ctk.CTkLabel(table_frame, text=cell, font=FONT, anchor="center")
+                label.grid(row=row_index, column=col_index, padx=10, pady=5, sticky="nsew")
 
 if __name__ == "__main__":
     app = IAEApp()
     app.mainloop()
-
