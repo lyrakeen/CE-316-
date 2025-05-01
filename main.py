@@ -6,6 +6,7 @@ from core.configuration import save_configuration, load_configuration
 import tkinter.filedialog as fd
 import os
 from tkinter import messagebox
+import json
 
 FONT = ("Segoe UI", 11)
 BG_COLOR = "#f4f4f4"
@@ -38,7 +39,7 @@ class IAEApp(tk.Tk):
         self.container.grid(row=0, column=1, sticky="nsew")
         self.container.pack_propagate(False)
 
-        # Frame sınıfları ve isimleri eşleşiyor
+
         self.frames = {}
         for F in (ProjectFrame, ConfigFrame, TestFrame):
             name = F.__name__.replace("Frame", "")  # 'Project', 'Config', 'Test'
@@ -46,7 +47,6 @@ class IAEApp(tk.Tk):
             self.frames[name] = frame
             frame.place(relwidth=1, relheight=1)
 
-        # Menü butonları: görünen isim → frame ismi
         buttons = {
             "Project": "Project",
             "Configuration": "Config",
@@ -90,31 +90,29 @@ class IAEApp(tk.Tk):
 
         manual_text.insert("1.0", """Welcome to the Integrated Assignment Environment (IAE)!
 
-This guide will help you understand how to use the application step by step.
+        Here’s a simple guide to help you get started:
 
-1. PROJECT TAB
-- Enter a project name.
-- Select a configuration JSON file (or create one from the Configuration tab).
-- Choose the folder containing student ZIP submissions.
-- Specify the input file and expected output file.
+        ➤ PROJECT TAB
+        - Fill in project name, config file path, ZIP folder, input and expected output files.
+        - Use 'Save Project' to store your setup as a JSON file.
+        - Load a previous setup anytime with 'Load Project'.
 
-2. CONFIGURATION TAB
-- Choose a language: C, Java, or Python.
-- Enter the compile and run commands.
-- Specify how input will be passed (arguments or stdin).
-- Click 'Save Configuration' to export a JSON file.
+        ➤ CONFIGURATION TAB
+        - Choose a language and enter compile/run commands.
+        - Set how input is passed (arguments or standard input).
+        - Use 'Save Configuration' to create a config file.
+        - 'Load' and 'Delete' help manage existing config files.
 
-3. TEST TAB
-- Click 'Run All Tests' to start processing all student submissions.
-- The table will display compile status, runtime result, and final comparison.
-- Results are shown in real-time.
+        ➤ TEST TAB
+        - Click 'Run All Tests' to compile and run student submissions.
+        - Results (compile/run/status) are shown in a table instantly.
 
-TIPS:
-- Use 'File > Save' to store the current project setup.
-- You can open saved projects from 'File > Open'.
-- For help or updates, check the 'About' section.
+        TIPS:
+        - Everything is saved as simple JSON files.
+        - Use the tab buttons — File menu options are not yet active.
+        - Check the About section for version info.
+        """)
 
-""")
         manual_text.configure(state="disabled")
 
     def _show_about(self):
@@ -123,20 +121,98 @@ TIPS:
     def show_frame(self, name):
         self.frames[name].tkraise()
 
+
+
 # === Project Section ===
+
 class ProjectFrame(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent, bg=BG_COLOR)
 
         tk.Label(self, text="Project Page", font=("Arial", 16), bg=BG_COLOR).pack(pady=20)
 
-        labels = ["Project Name", "Select Config File", "ZIP Folder", "Input File", "Expected Output File"]
-        for text in labels:
+        self.entries = {}
+
+        labels = [
+            ("Project Name", "project_name"),
+            ("Select Config File", "config_file"),
+            ("ZIP Folder", "zip_folder"),
+            ("Input File", "input_file"),
+            ("Expected Output File", "expected_output")
+        ]
+
+        for text, key in labels:
             row = tk.Frame(self, bg=BG_COLOR)
             row.pack(fill="x", padx=20, pady=8)
 
             tk.Label(row, text=text, font=FONT, bg=BG_COLOR, width=20, anchor="e").pack(side="left")
-            ttk.Entry(row, width=40).pack(side="left", padx=10)
+            entry = ttk.Entry(row, width=40)
+            entry.pack(side="left", padx=10)
+            self.entries[key] = entry
+
+
+        btn_row = tk.Frame(self, bg=BG_COLOR)
+        btn_row.pack(pady=20)
+
+        ttk.Button(btn_row, text="Save Project", command=self.save_project).pack(side="left", padx=10)
+        ttk.Button(btn_row, text="Load Project", command=self.load_project).pack(side="left", padx=10)
+
+    def save_project(self):
+        project_data = {
+            "project_name": self.entries["project_name"].get(),
+            "config_file": self.entries["config_file"].get(),
+            "zip_folder": self.entries["zip_folder"].get(),
+            "input_file": self.entries["input_file"].get(),
+            "expected_output_file": self.entries["expected_output"].get()
+        }
+
+        file_path = fd.asksaveasfilename(
+            defaultextension=".json",
+            filetypes=[("JSON Files", "*.json")],
+            title="Save Project As"
+        )
+
+        if file_path:
+            try:
+                with open(file_path, "w") as f:
+                    json.dump(project_data, f, indent=4)
+                messagebox.showinfo("Saved", f"Project saved to:\n{file_path}")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to save project:\n{e}")
+
+    def load_project(self):
+        file_path = fd.askopenfilename(
+            defaultextension=".json",
+            filetypes=[("JSON Files", "*.json")],
+            title="Open Project File"
+        )
+
+        if file_path:
+            try:
+                with open(file_path, "r") as f:
+                    project_data = json.load(f)
+
+                self.entries["project_name"].delete(0, tk.END)
+                self.entries["project_name"].insert(0, project_data.get("project_name", ""))
+
+                self.entries["config_file"].delete(0, tk.END)
+                self.entries["config_file"].insert(0, project_data.get("config_file", ""))
+
+                self.entries["zip_folder"].delete(0, tk.END)
+                self.entries["zip_folder"].insert(0, project_data.get("zip_folder", ""))
+
+                self.entries["input_file"].delete(0, tk.END)
+                self.entries["input_file"].insert(0, project_data.get("input_file", ""))
+
+                self.entries["expected_output"].delete(0, tk.END)
+                self.entries["expected_output"].insert(0, project_data.get("expected_output_file", ""))
+
+                messagebox.showinfo("Loaded", f"Project loaded from:\n{file_path}")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to load project:\n{e}")
+
+
+
 
 class ConfigFrame(tk.Frame):
     def __init__(self, parent, controller):
@@ -144,7 +220,7 @@ class ConfigFrame(tk.Frame):
         wrapper = tk.Frame(self, bg=BG_COLOR)
         wrapper.pack(pady=40, anchor="n")
 
-        # === GUI Bileşenleri ===
+
         ttk.Label(wrapper, text="Language", background=BG_COLOR, font=FONT).grid(row=0, column=0, padx=10, pady=10, sticky="e")
         self.language_combo = ttk.Combobox(wrapper, values=["C", "Java", "Python"], font=FONT, width=30)
         self.language_combo.grid(row=0, column=1, padx=10, pady=10)
@@ -161,7 +237,6 @@ class ConfigFrame(tk.Frame):
         self.input_type_combo = ttk.Combobox(wrapper, values=["Command-line Arguments", "Standard Input"], font=FONT, width=30)
         self.input_type_combo.grid(row=3, column=1, padx=10, pady=10)
 
-        # === Butonlar ===
         btn_frame = tk.Frame(wrapper, bg=BG_COLOR)
         btn_frame.grid(row=4, column=1, padx=10, pady=30, sticky="e")
 
@@ -223,6 +298,7 @@ class ConfigFrame(tk.Frame):
                     messagebox.showinfo("Deleted", f"Deleted:\n{file_path}")
                 except Exception as e:
                     messagebox.showerror("Error", f"Could not delete file:\n{e}")
+
 # === Test Section ===
 class TestFrame(tk.Frame):
     def __init__(self, parent, controller):
@@ -244,7 +320,6 @@ class TestFrame(tk.Frame):
 
         tree.pack(padx=20, pady=10, fill="both", expand=True)
 
-# === Run App ===
 if __name__ == "__main__":
     app = IAEApp()
     app.mainloop()
