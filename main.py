@@ -7,7 +7,7 @@ import tkinter.filedialog as fd
 import os
 from tkinter import messagebox
 import json
-
+from shutil import which
 FONT = ("Segoe UI", 11)
 BG_COLOR = "#f4f4f4"
 BTN_COLOR = "#dcdcdc"
@@ -254,16 +254,26 @@ class ConfigFrame(tk.Frame):
             "expected_output_file": "",
             "compare_command": "diff output.txt expected.txt"
         }
+        language = config_data["language"].strip().lower()
 
-        file_path = fd.asksaveasfilename(
-            defaultextension=".json",
-            filetypes=[("JSON files", "*.json")],
-            title="Save Configuration As"
-        )
+        if not language:
+            messagebox.showerror("Error", "Please select a language.")
+            return
 
-        if file_path:
-            save_configuration(config_data, file_path)
-            messagebox.showinfo("Saved", f"Configuration saved to:\n{file_path}")
+         # configs klasörünü oluştur (yoksa)
+        os.makedirs("configs", exist_ok=True)
+
+        # Örn: configs/java.json
+        file_path = os.path.join("configs", f"{language}.json")
+
+        save_configuration(config_data, file_path)
+        messagebox.showinfo("Saved", f"Configuration saved to:\n{file_path}")
+    
+    def is_command_available(self,command_string):
+         if not command_string.strip():
+            return False
+         executable = command_string.strip().split()[0]
+         return which(executable) is not None
 
     def load_config(self):
         file_path = fd.askopenfilename(
@@ -275,13 +285,23 @@ class ConfigFrame(tk.Frame):
         if file_path:
             config_data = load_configuration(file_path)
             if config_data:
-                self.language_combo.set(config_data.get("language", ""))
-                self.compile_entry.delete(0, tk.END)
-                self.compile_entry.insert(0, config_data.get("compile_command", ""))
-                self.run_entry.delete(0, tk.END)
-                self.run_entry.insert(0, config_data.get("run_command", ""))
-                self.input_type_combo.set(config_data.get("input_type", ""))
-                messagebox.showinfo("Loaded", f"Configuration loaded from:\n{file_path}")
+                compile_cmd = config_data.get("compile_command", "")
+                run_cmd = config_data.get("run_command", "")
+
+            if not self.is_command_available(compile_cmd):
+                messagebox.showerror("Missing Tool", f"The compiler in this config ('{compile_cmd}') is not available on this system.")
+                return
+            if not self.is_command_available(run_cmd):
+                messagebox.showerror("Missing Tool", f"The runtime command ('{run_cmd}') is not available on this system.")
+                return
+           
+            self.language_combo.set(config_data.get("language", ""))
+            self.compile_entry.delete(0, tk.END)
+            self.compile_entry.insert(0, config_data.get("compile_command", ""))
+            self.run_entry.delete(0, tk.END)
+            self.run_entry.insert(0, config_data.get("run_command", ""))
+            self.input_type_combo.set(config_data.get("input_type", ""))
+            messagebox.showinfo("Loaded", f"Configuration loaded from:\n{file_path}")
 
     def delete_config(self):
         file_path = fd.askopenfilename(

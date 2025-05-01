@@ -1,0 +1,10 @@
+
+    {
+        "language": "C",
+        "compile_command": "gcc main.c -o main",
+        "run_command": "./main",
+        "input_type": "Command-line Arguments",
+        "input_file": "",
+        "expected_output_file": "",
+        "compare_command": "diff output.txt expected.txt"
+    }
