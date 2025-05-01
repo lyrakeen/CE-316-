@@ -1,5 +1,11 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
+import tkinter.filedialog as fd
+from core.configuration import save_configuration
+from core.configuration import save_configuration, load_configuration
+import tkinter.filedialog as fd
+import os
+from tkinter import messagebox
 
 FONT = ("Segoe UI", 11)
 BG_COLOR = "#f4f4f4"
@@ -132,27 +138,91 @@ class ProjectFrame(tk.Frame):
             tk.Label(row, text=text, font=FONT, bg=BG_COLOR, width=20, anchor="e").pack(side="left")
             ttk.Entry(row, width=40).pack(side="left", padx=10)
 
-# === Configuration Section ===
 class ConfigFrame(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent, bg=BG_COLOR)
         wrapper = tk.Frame(self, bg=BG_COLOR)
         wrapper.pack(pady=40, anchor="n")
 
+        # === GUI Bileşenleri ===
         ttk.Label(wrapper, text="Language", background=BG_COLOR, font=FONT).grid(row=0, column=0, padx=10, pady=10, sticky="e")
-        ttk.Combobox(wrapper, values=["C", "Java", "Python"], font=FONT, width=30).grid(row=0, column=1, padx=10, pady=10)
+        self.language_combo = ttk.Combobox(wrapper, values=["C", "Java", "Python"], font=FONT, width=30)
+        self.language_combo.grid(row=0, column=1, padx=10, pady=10)
 
         ttk.Label(wrapper, text="Compile Command", background=BG_COLOR, font=FONT).grid(row=1, column=0, padx=10, pady=10, sticky="e")
-        ttk.Entry(wrapper, width=50).grid(row=1, column=1, padx=10, pady=10)
+        self.compile_entry = ttk.Entry(wrapper, width=50)
+        self.compile_entry.grid(row=1, column=1, padx=10, pady=10)
 
         ttk.Label(wrapper, text="Run Command", background=BG_COLOR, font=FONT).grid(row=2, column=0, padx=10, pady=10, sticky="e")
-        ttk.Entry(wrapper, width=50).grid(row=2, column=1, padx=10, pady=10)
+        self.run_entry = ttk.Entry(wrapper, width=50)
+        self.run_entry.grid(row=2, column=1, padx=10, pady=10)
 
         ttk.Label(wrapper, text="Input Type", background=BG_COLOR, font=FONT).grid(row=3, column=0, padx=10, pady=10, sticky="e")
-        ttk.Combobox(wrapper, values=["Command-line Arguments", "Standard Input"], font=FONT, width=30).grid(row=3, column=1, padx=10, pady=10)
+        self.input_type_combo = ttk.Combobox(wrapper, values=["Command-line Arguments", "Standard Input"], font=FONT, width=30)
+        self.input_type_combo.grid(row=3, column=1, padx=10, pady=10)
 
-        ttk.Button(wrapper, text="Save Configuration").grid(row=4, column=1, padx=10, pady=30, sticky="e")
+        # === Butonlar ===
+        btn_frame = tk.Frame(wrapper, bg=BG_COLOR)
+        btn_frame.grid(row=4, column=1, padx=10, pady=30, sticky="e")
 
+        ttk.Button(btn_frame, text="Save Configuration", command=self.save_config).pack(side="left", padx=5)
+        ttk.Button(btn_frame, text="Load Configuration", command=self.load_config).pack(side="left", padx=5)
+        ttk.Button(btn_frame, text="Delete Configuration", command=self.delete_config).pack(side="left", padx=5)
+
+    def save_config(self):
+        config_data = {
+            "language": self.language_combo.get(),
+            "compile_command": self.compile_entry.get(),
+            "run_command": self.run_entry.get(),
+            "input_type": self.input_type_combo.get(),
+            "input_file": "",
+            "expected_output_file": "",
+            "compare_command": "diff output.txt expected.txt"
+        }
+
+        file_path = fd.asksaveasfilename(
+            defaultextension=".json",
+            filetypes=[("JSON files", "*.json")],
+            title="Save Configuration As"
+        )
+
+        if file_path:
+            save_configuration(config_data, file_path)
+            messagebox.showinfo("Saved", f"Configuration saved to:\n{file_path}")
+
+    def load_config(self):
+        file_path = fd.askopenfilename(
+            defaultextension=".json",
+            filetypes=[("JSON files", "*.json")],
+            title="Load Configuration"
+        )
+
+        if file_path:
+            config_data = load_configuration(file_path)
+            if config_data:
+                self.language_combo.set(config_data.get("language", ""))
+                self.compile_entry.delete(0, tk.END)
+                self.compile_entry.insert(0, config_data.get("compile_command", ""))
+                self.run_entry.delete(0, tk.END)
+                self.run_entry.insert(0, config_data.get("run_command", ""))
+                self.input_type_combo.set(config_data.get("input_type", ""))
+                messagebox.showinfo("Loaded", f"Configuration loaded from:\n{file_path}")
+
+    def delete_config(self):
+        file_path = fd.askopenfilename(
+            defaultextension=".json",
+            filetypes=[("JSON files", "*.json")],
+            title="Select Configuration to Delete"
+        )
+
+        if file_path:
+            confirm = messagebox.askyesno("Confirm Delete", f"Are you sure you want to delete this file?\n\n{file_path}")
+            if confirm:
+                try:
+                    os.remove(file_path)
+                    messagebox.showinfo("Deleted", f"Deleted:\n{file_path}")
+                except Exception as e:
+                    messagebox.showerror("Error", f"Could not delete file:\n{e}")
 # === Test Section ===
 class TestFrame(tk.Frame):
     def __init__(self, parent, controller):
