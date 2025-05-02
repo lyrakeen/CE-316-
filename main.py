@@ -317,7 +317,6 @@ class AddConfigWindow(tk.Toplevel):
     def autofill_fields(self, event):
         lang = self.language_combo.get()
         if lang in POPULAR_LANGUAGES:
-            from core.configuration import POPULAR_LANGUAGES
             config = POPULAR_LANGUAGES[lang]
             for key, val in config.items():
                 if key in self.entries:
