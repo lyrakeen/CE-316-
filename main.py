@@ -201,8 +201,9 @@ class ProjectFrame(tk.Frame):
                 self.entries["project_name"].delete(0, tk.END)
                 self.entries["project_name"].insert(0, project_data.get("project_name", ""))
 
-                self.entries["config_file"].delete(0, tk.END)
-                self.entries["config_file"].insert(0, project_data.get("config_file", ""))
+                config_path = project_data.get("config_file", "")
+                config_name = os.path.basename(config_path)  # sadece 'python.json' kalır
+                self.entries["config_file"].set(config_name)
 
                 self.entries["zip_folder"].delete(0, tk.END)
                 self.entries["zip_folder"].insert(0, project_data.get("zip_folder", ""))
@@ -337,8 +338,29 @@ class AddConfigWindow(tk.Toplevel):
             return
 
         data = {"language": language}
+
         for key in self.entries:
-            data[key] = self.entries[key].get()
+            value = self.entries[key].get().strip()
+
+            # 🧠 Compile için: {source} varsa uzantıyı sonradan eklenmişse sil
+            if key == "compile_command":
+                if "main" in value and "{source}" not in value:
+                    value = value.replace("main", "{source}")
+                if "{source}" in value:
+                    value = value.replace("{source}.py", "{source}")
+                    value = value.replace("{source}.c", "{source}")
+                    value = value.replace("{source}.cpp", "{source}")
+
+            # 🧠 Run için: {exec} varsa sabit uzantıları ve "main" kelimesini sil
+            if key == "run_command":
+                if "main" in value and "{exec}" not in value:
+                    value = value.replace("main", "{exec}")
+                if "{exec}" in value:
+                    value = value.replace("{exec}.py", "{exec}")
+                    value = value.replace("{exec}.c", "{exec}")
+                    value = value.replace("{exec}.cpp", "{exec}")
+
+            data[key] = value
 
         for cmd in [data['compile_command'], data['run_command']]:
             if cmd.strip():
