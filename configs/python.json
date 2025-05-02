@@ -1,0 +1,9 @@
+{
+    "language": "Python",
+    "compile_command": "python3 -m py_compile main.py",
+    "run_command": "python3 main.py",
+    "input_type": "Standard Input",
+    "input_file": "",
+    "expected_output_file": "",
+    "compare_command": "diff output.txt expected.txt"
+}

@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import tkinter.filedialog as fd
 from core.configuration import save_configuration, load_configuration, POPULAR_LANGUAGES
+from core.configuration import list_config_files
 import tkinter.filedialog as fd
 import os
 from tkinter import messagebox
@@ -145,9 +146,15 @@ class ProjectFrame(tk.Frame):
             row.pack(fill="x", padx=20, pady=8)
 
             tk.Label(row, text=text, font=FONT, bg=BG_COLOR, width=20, anchor="e").pack(side="left")
-            entry = ttk.Entry(row, width=40)
-            entry.pack(side="left", padx=10)
-            self.entries[key] = entry
+            if key == "config_file":
+                combo = ttk.Combobox(row, width=37, state="readonly")
+                combo['values'] = list_config_files("configs")
+                combo.pack(side="left", padx=10)
+                self.entries[key] = combo
+            else:
+                entry = ttk.Entry(row, width=40)
+                entry.pack(side="left", padx=10)
+                self.entries[key] = entry
 
 
         btn_row = tk.Frame(self, bg=BG_COLOR)

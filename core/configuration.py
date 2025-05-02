@@ -1,4 +1,5 @@
 import json
+import os
 
 POPULAR_LANGUAGES = {
     "C": {
@@ -66,3 +67,12 @@ def save_configuration(config_data, file_path):
         print(f"[✓] Configuration saved to {file_path}")
     except Exception as e:
         print(f"[!] Failed to save configuration: {e}")
+
+
+
+def list_config_files(config_dir="configs"):
+    """Return list of available .json config files in the given directory."""
+    if not os.path.exists(config_dir):
+        os.makedirs(config_dir)
+    return [f for f in os.listdir(config_dir) if f.endswith(".json")]
+
