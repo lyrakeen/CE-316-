@@ -1,8 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 import tkinter.filedialog as fd
-from core.configuration import save_configuration
-from core.configuration import save_configuration, load_configuration
+from core.configuration import save_configuration, load_configuration, POPULAR_LANGUAGES
 import tkinter.filedialog as fd
 import os
 from tkinter import messagebox
@@ -217,108 +216,155 @@ class ProjectFrame(tk.Frame):
 class ConfigFrame(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent, bg=BG_COLOR)
-        wrapper = tk.Frame(self, bg=BG_COLOR)
-        wrapper.pack(pady=40, anchor="n")
+        self.controller = controller
+        self.selected_language = tk.StringVar()
 
+        self.language_listbox = tk.Listbox(self, font=FONT, width=30, height=8)
+        self.language_listbox.pack(pady=20)
+        self.language_listbox.bind("<<ListboxSelect>>", self.on_language_select)
 
-        ttk.Label(wrapper, text="Language", background=BG_COLOR, font=FONT).grid(row=0, column=0, padx=10, pady=10, sticky="e")
-        self.language_combo = ttk.Combobox(wrapper, values=["C", "Java", "Python"], font=FONT, width=30)
-        self.language_combo.grid(row=0, column=1, padx=10, pady=10)
+        btn_frame = tk.Frame(self, bg=BG_COLOR)
+        btn_frame.pack(pady=10)
+        ttk.Button(btn_frame, text="Add New Configuration", command=self.show_add_config_page).pack(side="left", padx=5)
+        ttk.Button(btn_frame, text="Delete Selected", command=self.delete_selected_config).pack(side="left", padx=5)
 
-        ttk.Label(wrapper, text="Compile Command", background=BG_COLOR, font=FONT).grid(row=1, column=0, padx=10, pady=10, sticky="e")
-        self.compile_entry = ttk.Entry(wrapper, width=50)
-        self.compile_entry.grid(row=1, column=1, padx=10, pady=10)
+        self.detail_frame = tk.Frame(self, bg=BG_COLOR)
+        self.detail_frame.pack(pady=20)
 
-        ttk.Label(wrapper, text="Run Command", background=BG_COLOR, font=FONT).grid(row=2, column=0, padx=10, pady=10, sticky="e")
-        self.run_entry = ttk.Entry(wrapper, width=50)
-        self.run_entry.grid(row=2, column=1, padx=10, pady=10)
+        self.populate_language_list()
 
-        ttk.Label(wrapper, text="Input Type", background=BG_COLOR, font=FONT).grid(row=3, column=0, padx=10, pady=10, sticky="e")
-        self.input_type_combo = ttk.Combobox(wrapper, values=["Command-line Arguments", "Standard Input"], font=FONT, width=30)
-        self.input_type_combo.grid(row=3, column=1, padx=10, pady=10)
+    def populate_language_list(self):
+        self.language_listbox.delete(0, tk.END)
+        if not os.path.exists("configs"):
+            os.makedirs("configs")
+        for filename in os.listdir("configs"):
+            if filename.endswith(".json"):
+                lang = os.path.splitext(filename)[0].capitalize()
+                self.language_listbox.insert(tk.END, lang)
 
-        btn_frame = tk.Frame(wrapper, bg=BG_COLOR)
-        btn_frame.grid(row=4, column=1, padx=10, pady=30, sticky="e")
+    def on_language_select(self, event):
+        selection = self.language_listbox.curselection()
+        if not selection:
+            return
+        language = self.language_listbox.get(selection[0])
+        path = os.path.join("configs", f"{language.lower()}.json")
+        config = load_configuration(path)
+        self.show_config_details(config)
 
-        ttk.Button(btn_frame, text="Save Configuration", command=self.save_config).pack(side="left", padx=5)
-        ttk.Button(btn_frame, text="Load Configuration", command=self.load_config).pack(side="left", padx=5)
-        ttk.Button(btn_frame, text="Delete Configuration", command=self.delete_config).pack(side="left", padx=5)
+    def show_config_details(self, config):
+        for widget in self.detail_frame.winfo_children():
+            widget.destroy()
 
-    def save_config(self):
-        config_data = {
-            "language": self.language_combo.get(),
-            "compile_command": self.compile_entry.get(),
-            "run_command": self.run_entry.get(),
-            "input_type": self.input_type_combo.get(),
-            "input_file": "",
-            "expected_output_file": "",
-            "compare_command": "diff output.txt expected.txt"
-        }
-        language = config_data["language"].strip().lower()
-
-        if not language:
-            messagebox.showerror("Error", "Please select a language.")
+        if not config:
             return
 
-         # configs klasörünü oluştur (yoksa)
-        os.makedirs("configs", exist_ok=True)
+        ttk.Label(self.detail_frame, text=f"Language: {config.get('language', '')}", font=FONT, background=BG_COLOR).pack(pady=5)
+        ttk.Label(self.detail_frame, text=f"Compile: {config.get('compile_command', '')}", font=FONT, background=BG_COLOR).pack(pady=5)
+        ttk.Label(self.detail_frame, text=f"Run: {config.get('run_command', '')}", font=FONT, background=BG_COLOR).pack(pady=5)
+        ttk.Label(self.detail_frame, text=f"Input Type: {config.get('input_type', '')}", font=FONT, background=BG_COLOR).pack(pady=5)
 
-        # Örn: configs/java.json
-        file_path = os.path.join("configs", f"{language}.json")
+    def show_add_config_page(self):
+        AddConfigWindow(self)
 
-        save_configuration(config_data, file_path)
-        messagebox.showinfo("Saved", f"Configuration saved to:\n{file_path}")
-    
-    def is_command_available(self,command_string):
-         if not command_string.strip():
-            return False
-         executable = command_string.strip().split()[0]
-         return which(executable) is not None
+    def delete_selected_config(self):
+        selection = self.language_listbox.curselection()
+        if not selection:
+            messagebox.showwarning("No Selection", "Please select a language to delete.")
+            return
 
-    def load_config(self):
-        file_path = fd.askopenfilename(
-            defaultextension=".json",
-            filetypes=[("JSON files", "*.json")],
-            title="Load Configuration"
+        language = self.language_listbox.get(selection[0])
+        path = os.path.join("configs", f"{language.lower()}.json")
+
+        if messagebox.askyesno("Delete", f"Are you sure you want to delete the configuration for {language}?"):
+            try:
+                os.remove(path)
+                self.populate_language_list()
+                for widget in self.detail_frame.winfo_children():
+                    widget.destroy()
+                messagebox.showinfo("Deleted", f"{language} configuration deleted.")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to delete configuration: {e}")
+
+class AddConfigWindow(tk.Toplevel):
+    def __init__(self, master):
+        super().__init__(master)
+        self.title("Add New Configuration")
+        self.geometry("500x400")
+        self.master = master
+        self.configure(bg=BG_COLOR)
+
+        self.entries = {}
+
+        row = tk.Frame(self, bg=BG_COLOR)
+        row.pack(pady=10, padx=20, anchor="w")
+        tk.Label(row, text="Language:", font=FONT, bg=BG_COLOR, width=18, anchor="e").pack(side="left")
+        from core.configuration import POPULAR_LANGUAGES
+        self.language_combo = ttk.Combobox(row, values=list(POPULAR_LANGUAGES.keys()), font=FONT, width=30)
+        self.language_combo.pack(side="left")
+        self.language_combo.bind("<<ComboboxSelected>>", self.autofill_fields)
+
+        for key in ["compile_command", "run_command", "input_type"]:
+            row = tk.Frame(self, bg=BG_COLOR)
+            row.pack(pady=10, padx=20, anchor="w")
+            label = key.replace("_", " ").title()
+            tk.Label(row, text=f"{label}:", font=FONT, bg=BG_COLOR, width=18, anchor="e").pack(side="left")
+            entry = ttk.Entry(row, width=40)
+            entry.pack(side="left")
+            self.entries[key] = entry
+
+        ttk.Button(self, text="Save Configuration", command=self.save_new_config).pack(pady=20)
+
+    def autofill_fields(self, event):
+        lang = self.language_combo.get()
+        if lang in POPULAR_LANGUAGES:
+            from core.configuration import POPULAR_LANGUAGES
+            config = POPULAR_LANGUAGES[lang]
+            for key, val in config.items():
+                if key in self.entries:
+                    self.entries[key].delete(0, tk.END)
+                    self.entries[key].insert(0, val)
+
+    def save_new_config(self):
+        language = self.language_combo.get()
+        if not language:
+            messagebox.showerror("Missing Info", "Please select a language.")
+            return
+
+        data = {"language": language}
+        for key in self.entries:
+            data[key] = self.entries[key].get()
+
+        for cmd in [data['compile_command'], data['run_command']]:
+            if cmd.strip():
+                first_word = cmd.strip().split()[0]
+                if which(first_word) is None:
+                    self.show_tool_error(first_word)
+                    return
+
+        data.update({"input_file": "", "expected_output_file": "", "compare_command": "diff output.txt expected.txt"})
+        file_path = os.path.join("configs", f"{language.strip().lower()}.json")
+        save_configuration(data, file_path)
+        self.master.populate_language_list()
+        messagebox.showinfo("Saved", f"Configuration saved as {file_path}")
+        self.destroy()
+
+    def show_tool_error(self, tool):
+        help_message = (
+            f"The command '{tool}' could not be found on your system.\n\n"
+            f"Possible reasons:\n"
+            f"• The tool is not installed.\n"
+            f"• It is installed but not added to your system PATH.\n\n"
+            f"🔧 Solution:\n"
+            f"→ Make sure '{tool}' is installed and accessible from the terminal or command prompt.\n"
+            f"→ You can test this by typing '{tool}' in a terminal.\n\n"
+            f"Example for Windows (GCC):\n"
+            f"  Add C:\\MinGW\\bin to your Environment Variables > PATH.\n\n"
+            f"Example for macOS/Linux (Java):\n"
+            f"  Add export PATH=$PATH:/usr/bin/java to your shell config.\n"
         )
+        messagebox.showerror("Missing Tool", help_message)
 
-        if file_path:
-            config_data = load_configuration(file_path)
-            if config_data:
-                compile_cmd = config_data.get("compile_command", "")
-                run_cmd = config_data.get("run_command", "")
-
-            if not self.is_command_available(compile_cmd):
-                messagebox.showerror("Missing Tool", f"The compiler in this config ('{compile_cmd}') is not available on this system.")
-                return
-            if not self.is_command_available(run_cmd):
-                messagebox.showerror("Missing Tool", f"The runtime command ('{run_cmd}') is not available on this system.")
-                return
-           
-            self.language_combo.set(config_data.get("language", ""))
-            self.compile_entry.delete(0, tk.END)
-            self.compile_entry.insert(0, config_data.get("compile_command", ""))
-            self.run_entry.delete(0, tk.END)
-            self.run_entry.insert(0, config_data.get("run_command", ""))
-            self.input_type_combo.set(config_data.get("input_type", ""))
-            messagebox.showinfo("Loaded", f"Configuration loaded from:\n{file_path}")
-
-    def delete_config(self):
-        file_path = fd.askopenfilename(
-            defaultextension=".json",
-            filetypes=[("JSON files", "*.json")],
-            title="Select Configuration to Delete"
-        )
-
-        if file_path:
-            confirm = messagebox.askyesno("Confirm Delete", f"Are you sure you want to delete this file?\n\n{file_path}")
-            if confirm:
-                try:
-                    os.remove(file_path)
-                    messagebox.showinfo("Deleted", f"Deleted:\n{file_path}")
-                except Exception as e:
-                    messagebox.showerror("Error", f"Could not delete file:\n{e}")
-
+        
 # === Test Section ===
 class TestFrame(tk.Frame):
     def __init__(self, parent, controller):
