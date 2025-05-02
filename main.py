@@ -151,6 +151,7 @@ class ProjectFrame(tk.Frame):
                 combo['values'] = list_config_files("configs")
                 combo.pack(side="left", padx=10)
                 self.entries[key] = combo
+                combo.bind("<Button-1>", lambda e: combo.configure(values=list_config_files("configs")))
             else:
                 entry = ttk.Entry(row, width=40)
                 entry.pack(side="left", padx=10)
