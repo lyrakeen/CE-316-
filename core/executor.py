@@ -74,10 +74,22 @@ def run_all_submissions(project_data):
                 continue
 
             # Compare
-            with open(output_path, "r") as act, open(expected_file, "r") as exp:
-                actual = act.read().strip()
-                expected = exp.read().strip()
-                result = "Passed" if actual == expected else "Wrong Output"
+            compare_cmd = config.get("compare_command", "").strip()
+
+            if compare_cmd:
+                compare_cmd = compare_cmd.replace("actual.txt", output_path).replace("expected.txt", expected_file)
+                try:
+                    result_obj = subprocess.run(compare_cmd, shell=True, capture_output=True, text=True)
+                    result = "Passed" if result_obj.returncode == 0 else "Wrong Output"
+                except Exception as e:
+                    print(f"[!] Compare command error: {e}")
+                    result = "Compare Error"
+            else:
+                # Default fallback comparison
+                with open(output_path, "r") as act, open(expected_file, "r") as exp:
+                    actual = act.read().strip()
+                    expected = exp.read().strip()
+                    result = "Passed" if actual == expected else "Wrong Output"
 
             results.append((student_id, "Success", "Success", result))
 

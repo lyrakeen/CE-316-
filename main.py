@@ -116,7 +116,16 @@ class IAEApp(tk.Tk):
         manual_text.configure(state="disabled")
 
     def _show_about(self):
-        messagebox.showinfo("About", "Integrated Assignment Environment v1.0")
+        messagebox.showinfo(
+            "About",
+            "Integrated Assignment Environment (IAE) v1.0\n\n"
+            "Developed as part of CE316 Project\n"
+            "\n"
+            "Features:\n"
+            "- Project and Configuration Management\n"
+            "- Automatic Testing of Student Submissions\n"
+            "- JSON-based Save & Load\n\n"
+        )
 
     def show_frame(self, name):
         self.frames[name].tkraise()
@@ -173,6 +182,11 @@ class ProjectFrame(tk.Frame):
             "expected_output_file": self.entries["expected_output"].get()
         }
 
+        # REQ 9: test sonuçlarını projeye dahil et
+        test_frame = self.master.master.frames.get("Test")
+        if test_frame and hasattr(test_frame, "results"):
+            project_data["results"] = test_frame.results
+
         file_path = fd.asksaveasfilename(
             defaultextension=".json",
             filetypes=[("JSON Files", "*.json")],
@@ -186,6 +200,7 @@ class ProjectFrame(tk.Frame):
                 messagebox.showinfo("Saved", f"Project saved to:\n{file_path}")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to save project:\n{e}")
+
 
     def load_project(self):
         file_path = fd.askopenfilename(
@@ -283,6 +298,7 @@ class ConfigFrame(tk.Frame):
         language = self.language_listbox.get(selection[0])
         path = os.path.join("configs", f"{language.lower()}.json")
 
+
         if messagebox.askyesno("Delete", f"Are you sure you want to delete the configuration for {language}?"):
             try:
                 os.remove(path)
@@ -292,6 +308,7 @@ class ConfigFrame(tk.Frame):
                 messagebox.showinfo("Deleted", f"{language} configuration deleted.")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to delete configuration: {e}")
+
 
 class AddConfigWindow(tk.Toplevel):
     def __init__(self, master):
@@ -355,6 +372,7 @@ class AddConfigWindow(tk.Toplevel):
         messagebox.showinfo("Saved", f"Configuration saved as {file_path}")
         self.destroy()
 
+
     def show_tool_error(self, tool):
         help_message = (
             f"The command '{tool}' could not be found on your system.\n\n"
@@ -378,6 +396,7 @@ class TestFrame(tk.Frame):
         super().__init__(parent, bg=BG_COLOR)
         self.controller = controller
         self.project_data = {}
+        self.results = []  # REQ 9 için eklendi: test sonuçlarını bellekte tut
 
         btn_frame = tk.Frame(self, bg=BG_COLOR)
         btn_frame.pack(pady=10)
@@ -423,16 +442,17 @@ class TestFrame(tk.Frame):
             messagebox.showwarning("Missing Data", "Please load a project file and student codes first.")
             return
 
-        from core.executor import run_all_submissions  # dışarıda tanımlı dosyadan
-
+        from core.executor import run_all_submissions
         results = run_all_submissions(self.project_data)
+        self.results = results  # REQ 9 için test sonuçları bellekte saklanır
 
-        # Tabloyu temizle ve sonuçları ekle
         for item in self.tree.get_children():
             self.tree.delete(item)
 
         for student_id, compile_status, run_status, result in results:
             self.tree.insert("", "end", values=(student_id, compile_status, run_status, result))
+
+
 
 if __name__ == "__main__":
     app = IAEApp()
