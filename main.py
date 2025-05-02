@@ -303,22 +303,63 @@ class ConfigFrame(tk.Frame):
 class TestFrame(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent, bg=BG_COLOR)
-        ttk.Button(self, text="Run All Tests").pack(pady=20)
+        self.controller = controller
+        self.project_data = {}
+
+        btn_frame = tk.Frame(self, bg=BG_COLOR)
+        btn_frame.pack(pady=10)
+
+        ttk.Button(btn_frame, text="Select Project", command=self.load_project_file).pack(side="left", padx=5)
+        ttk.Button(btn_frame, text="Load Student Codes", command=self.select_student_code_directory).pack(side="left", padx=5)
+        ttk.Button(btn_frame, text="Run All Tests", command=self.run_all_tests).pack(side="left", padx=5)
 
         columns = ("student_id", "compile_status", "run_status", "result")
-        tree = ttk.Treeview(self, columns=columns, show="headings", height=20)
+        self.tree = ttk.Treeview(self, columns=columns, show="headings", height=20)
         style = ttk.Style()
         style.configure("Treeview.Heading", font=(FONT[0], 11, "bold"))
         style.configure("Treeview", font=FONT, rowheight=30)
 
         for col in columns:
-            tree.heading(col, text=col.replace("_", " ").title())
-            tree.column(col, width=200, anchor="center")
+            self.tree.heading(col, text=col.replace("_", " ").title())
+            self.tree.column(col, width=200, anchor="center")
 
-        tree.insert("", "end", values=("20230001", "Success", "Success", "Passed"))
-        tree.insert("", "end", values=("20230002", "Error", "N/A", "Failed"))
+        self.tree.pack(padx=20, pady=10, fill="both", expand=True)
 
-        tree.pack(padx=20, pady=10, fill="both", expand=True)
+    def load_project_file(self):
+        file_path = fd.askopenfilename(
+            defaultextension=".json",
+            filetypes=[("JSON files", "*.json")],
+            title="Select Project File"
+        )
+        if file_path:
+            try:
+                with open(file_path, "r") as f:
+                    self.project_data = json.load(f)
+                messagebox.showinfo("Loaded", f"Project loaded:\n{file_path}")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to load project:\n{e}")
+
+    def select_student_code_directory(self):
+        folder_path = fd.askdirectory(title="Select Student Code Directory")
+        if folder_path:
+            self.project_data["student_code_dir"] = folder_path
+            messagebox.showinfo("Loaded", f"Student codes loaded from:\n{folder_path}")
+
+    def run_all_tests(self):
+        if not self.project_data.get("config_file") or not self.project_data.get("student_code_dir"):
+            messagebox.showwarning("Missing Data", "Please load a project file and student codes first.")
+            return
+
+        from core.executor import run_all_submissions  # dışarıda tanımlı dosyadan
+
+        results = run_all_submissions(self.project_data)
+
+        # Tabloyu temizle ve sonuçları ekle
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+
+        for student_id, compile_status, run_status, result in results:
+            self.tree.insert("", "end", values=(student_id, compile_status, run_status, result))
 
 if __name__ == "__main__":
     app = IAEApp()
