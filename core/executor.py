@@ -3,10 +3,6 @@ from configuration import load_configuration
 import os
 
 def compile_code(compile_command):
-    """
-    Compiles the source code using the given command string.
-    Example: "gcc main.c -o main"
-    """
     try:
         result = subprocess.run(compile_command, shell=True, capture_output=True, text=True)
         if result.returncode == 0:
@@ -21,10 +17,7 @@ def compile_code(compile_command):
         return False, str(e)
 
 def run_executable(run_command, input_file=None, output_file=None):
-    """
-    Runs the compiled executable or script.
-    You can optionally redirect input and output via file paths.
-    """
+
     try:
         with open(input_file, 'r') if input_file else None as inp, \
              open(output_file, 'w') if output_file else None as out:
@@ -41,6 +34,7 @@ def run_executable(run_command, input_file=None, output_file=None):
     except Exception as e:
         print(f"[!] Execution error: {e}")
         return False, str(e)
+
 
 def run_all_submissions(project_data):
     config = load_configuration(project_data["config_file"])
@@ -67,11 +61,26 @@ def run_all_submissions(project_data):
             # Run
             output_path = os.path.join(student_dir, f"{student_id}_output.txt")
             run_cmd = config["run_command"].replace("{exec}", exec_name)
-            run_ok, _ = run_executable(run_cmd, input_file=input_file, output_file=output_path)
+
+            # REQ 7: input_type CONTROL (stdin or argüman)
+            if config.get("input_type") == "Command-line Arguments" and input_file:
+                try:
+                    with open(input_file, "r") as f:
+                        args = f.read().strip()
+                    run_cmd = f"{run_cmd} {args}"  # Argümanlar komut satırına eklenir
+                    input_for_run = None  # stdin will not be in use
+                except Exception as e:
+                    print(f"[!] Failed to read input file for arguments: {e}")
+                    input_for_run = None
+            else:
+                input_for_run = input_file  # stdin will be used
+
+            run_ok, _ = run_executable(run_cmd, input_file=input_for_run, output_file=output_path)
 
             if not run_ok:
                 results.append((student_id, "Success", "Error", "Runtime Failed"))
                 continue
+
 
             # Compare
             compare_cmd = config.get("compare_command", "").strip()
