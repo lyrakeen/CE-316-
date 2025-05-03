@@ -49,13 +49,18 @@ POPULAR_LANGUAGES = {
     }
 }
 def load_configuration(file_path):
+    # Eğer 'configs' zaten dosya yolunda yoksa, ekle
+    if not os.path.isabs(file_path) and "configs" not in file_path:
+        file_path = os.path.join("configs", file_path)
+
+    if not os.path.exists(file_path):
+        print(f"[!] Configuration file not found: {file_path}")
+        return None
+
     try:
         with open(file_path, 'r') as file:
             config = json.load(file)
         return config
-    except FileNotFoundError:
-        print(f"[!] Configuration file not found: {file_path}")
-        return None
     except json.JSONDecodeError:
         print(f"[!] Configuration file is not a valid JSON: {file_path}")
         return None

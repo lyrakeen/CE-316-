@@ -1,10 +1,16 @@
 import subprocess
-from configuration import load_configuration
+from core.configuration import load_configuration
 import os
 
-def compile_code(compile_command):
+def compile_code(compile_command, working_dir=None):
     try:
-        result = subprocess.run(compile_command, shell=True, capture_output=True, text=True)
+        result = subprocess.run(
+            compile_command,
+            shell=True,
+            cwd=working_dir,  # >>> burası kritik
+            capture_output=True,
+            text=True
+        )
         if result.returncode == 0:
             print("[✓] Compilation successful.")
             return True, result.stdout
@@ -16,13 +22,20 @@ def compile_code(compile_command):
         print(f"[!] Compilation error: {e}")
         return False, str(e)
 
-def run_executable(run_command, input_file=None, output_file=None):
-
+def run_executable(run_command, input_file=None, output_file=None, working_dir=None):
     try:
         with open(input_file, 'r') if input_file else None as inp, \
              open(output_file, 'w') if output_file else None as out:
 
-            result = subprocess.run(run_command, shell=True, stdin=inp, stdout=out, stderr=subprocess.PIPE, text=True)
+            result = subprocess.run(
+                run_command,
+                shell=True,
+                stdin=inp,
+                stdout=out,
+                stderr=subprocess.PIPE,
+                text=True,
+                cwd=working_dir  # BURASI KRİTİK
+            )
 
         if result.returncode == 0:
             print("[✓] Execution successful.")
@@ -35,6 +48,10 @@ def run_executable(run_command, input_file=None, output_file=None):
         print(f"[!] Execution error: {e}")
         return False, str(e)
 
+def normalize_output(path):
+    with open(path, "r", encoding="utf-8") as f:
+        lines = [line.strip() for line in f.readlines()]
+        return [line for line in lines if line]
 
 def run_all_submissions(project_data):
     config = load_configuration(project_data["config_file"])
@@ -44,67 +61,97 @@ def run_all_submissions(project_data):
 
     results = []
 
-    for file_name in os.listdir(student_dir):
-        if file_name.endswith(config["language"][:2].lower()):  # py, ja, c
-            student_id = os.path.splitext(file_name)[0]
-            source_path = os.path.join(student_dir, file_name)
-            exec_name = os.path.join(student_dir, f"{student_id}_exec")
+    for student_root in os.listdir(student_dir):
+        student_path = os.path.join(student_dir, student_root)
+        if not os.path.isdir(student_path):
+            continue
 
-            # Compile
-            compile_cmd = config["compile_command"].replace("{source}", source_path).replace("{output}", exec_name)
-            comp_ok, _ = compile_code(compile_cmd)
+        main_file = None
+        for root, _, files in os.walk(student_path):
+            for f in files:
+                ext_map = {
+                    "Python": ".py",
+                    "Java": ".java",
+                    "C": ".c",
+                    "C++": ".cpp"
+                }
+                lang_ext = ext_map.get(config.get("language", ""), "").lower()
 
-            if not comp_ok:
-                results.append((student_id, "Error", "-", "Compile Failed"))
-                continue
+                if f.lower() == f"main{lang_ext}":
+                    main_file = os.path.join(root, f)
+                    break
+            if main_file:
+                break
 
-            # Run
-            output_path = os.path.join(student_dir, f"{student_id}_output.txt")
-            run_cmd = config["run_command"].replace("{exec}", exec_name)
+        if not main_file:
+            results.append((student_root, "-", "-", "main file not found"))
+            continue
 
-            # REQ 7: input_type CONTROL (stdin or argüman)
-            if config.get("input_type") == "Command-line Arguments" and input_file:
-                try:
-                    with open(input_file, "r") as f:
-                        args = f.read().strip()
-                    run_cmd = f"{run_cmd} {args}"  # Argümanlar komut satırına eklenir
-                    input_for_run = None  # stdin will not be in use
-                except Exception as e:
-                    print(f"[!] Failed to read input file for arguments: {e}")
-                    input_for_run = None
-            else:
-                input_for_run = input_file  # stdin will be used
+        exec_name = os.path.join(student_path, f"{student_root}_exec")
 
-            run_ok, _ = run_executable(run_cmd, input_file=input_for_run, output_file=output_path)
+        compile_cmd = config["compile_command"].replace("{source}", main_file).replace("{output}", exec_name).strip()
+        if compile_cmd:
+            comp_ok, _ = compile_code(compile_cmd, working_dir=os.path.dirname(main_file))
+            compile_status = "OK" if comp_ok else "Error"
+        else:
+            compile_status = "N/A"
+            comp_ok = True
 
-            if not run_ok:
-                results.append((student_id, "Success", "Error", "Runtime Failed"))
-                continue
+        if not comp_ok:
+            results.append((student_root, compile_status, "-", "Compile Failed"))
+            continue
 
-            # Compare
+        output_path = os.path.join(student_path, f"{student_root}_output.txt")
+        run_cmd = config["run_command"].replace("{exec}", exec_name).strip()
+
+        if config.get("input_type") == "Command-line Arguments" and input_file:
+            try:
+                with open(input_file, "r") as f:
+                    args = f.read().strip()
+                run_cmd = f"{run_cmd} {args}"
+                input_for_run = None
+            except Exception:
+                input_for_run = None
+        else:
+            input_for_run = input_file
+
+        run_ok, _ = run_executable(
+            run_cmd,
+            input_file=input_for_run,
+            output_file=output_path,
+            working_dir=os.path.dirname(main_file)
+        )
+        run_status = "OK" if run_ok else "Error"
+
+        if not run_ok:
+            results.append((student_root, compile_status, run_status, "Runtime Failed"))
+            continue
+
         compare_cmd = config.get("compare_command", "").strip()
-
         if compare_cmd:
-
             compare_cmd = compare_cmd.replace("actual.txt", output_path).replace("expected.txt", expected_file)
             try:
                 result_obj = subprocess.run(compare_cmd, shell=True, capture_output=True, text=True)
                 result = "Passed" if result_obj.returncode == 0 else "Wrong Output"
-            except Exception as e:
-                print(f"[!] Compare command error: {e}")
+            except Exception:
                 result = "Compare Error"
         else:
-
             try:
-                with open(output_path, "r") as act, open(expected_file, "r") as exp:
-                    actual = act.read().strip()
-                    expected = exp.read().strip()
-                    result = "Passed" if actual == expected else "Wrong Output"
+                actual_lines = normalize_output(output_path)
+                expected_lines = normalize_output(expected_file)
+                if actual_lines == expected_lines:
+                    result = "Passed"
+                else:
+                    print("[DEBUG] Actual:", actual_lines)
+                    print("[DEBUG] Expected:", expected_lines)
+                    result = "Wrong Output"
             except Exception as e:
                 print(f"[!] File comparison error: {e}")
                 result = "Compare Error"
 
-
-        results.append((student_id, "Success", "Success", result))
+        results.append((student_root, compile_status, run_status, result))
 
     return results
+
+
+

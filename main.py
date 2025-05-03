@@ -1,11 +1,8 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 import tkinter.filedialog as fd
-from core.configuration import save_configuration, load_configuration, POPULAR_LANGUAGES
-from core.configuration import list_config_files
-import tkinter.filedialog as fd
+from core.configuration import save_configuration, load_configuration, POPULAR_LANGUAGES, list_config_files
 import os
-from tkinter import messagebox
 import json
 from shutil import which
 
@@ -22,14 +19,11 @@ class IAEApp(tk.Tk):
         self.title("Integrated Assignment Environment (IAE)")
         self.geometry("1200x700")
         self.configure(bg=BG_COLOR)
-
         self._create_menu()
 
         style = ttk.Style(self)
         style.configure("TButton", font=FONT, padding=8)
-        style.map("TButton",
-                  background=[("active", HOVER_COLOR)],
-                  relief=[("pressed", "sunken"), ("!pressed", "flat")])
+        style.map("TButton", background=[("active", HOVER_COLOR)], relief=[("pressed", "sunken"), ("!pressed", "flat")])
 
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
@@ -43,17 +37,12 @@ class IAEApp(tk.Tk):
 
         self.frames = {}
         for F in (ProjectFrame, ConfigFrame, TestFrame):
-            name = F.__name__.replace("Frame", "")  # 'Project', 'Config', 'Test'
+            name = F.__name__.replace("Frame", "")
             frame = F(parent=self.container, controller=self)
             self.frames[name] = frame
             frame.place(relwidth=1, relheight=1)
 
-        buttons = {
-            "Project": "Project",
-            "Configuration": "Config",
-            "Test": "Test"
-        }
-
+        buttons = {"Project": "Project", "Configuration": "Config", "Test": "Test"}
         for label, frame_name in buttons.items():
             btn = ttk.Button(self.nav_frame, text=label, command=lambda n=frame_name: self.show_frame(n))
             btn.pack(pady=30, fill="x", padx=20)
@@ -86,66 +75,50 @@ class IAEApp(tk.Tk):
         manual_window.title("User Manual")
         manual_window.geometry("600x500")
 
-        manual_text = tk.Text(manual_window, wrap="word", font=("Segoe UI", 11))
+        manual_text = tk.Text(manual_window, wrap="word", font=FONT)
         manual_text.pack(expand=True, fill="both", padx=10, pady=10)
 
         manual_text.insert("1.0", """Welcome to the Integrated Assignment Environment (IAE)!
 
-        Here’s a simple guide to help you get started:
+➤ PROJECT TAB
+- Fill in project name, config file path, ZIP folder, input and expected output files.
+- Use 'Save Project' to store your setup as a JSON file.
+- Load a previous setup anytime with 'Load Project'.
 
-        ➤ PROJECT TAB
-        - Fill in project name, config file path, ZIP folder, input and expected output files.
-        - Use 'Save Project' to store your setup as a JSON file.
-        - Load a previous setup anytime with 'Load Project'.
+➤ CONFIGURATION TAB
+- Choose a language and enter compile/run commands.
+- Set how input is passed (arguments or standard input).
+- Use 'Save Configuration' to create a config file.
+- 'Load' and 'Delete' help manage existing config files.
 
-        ➤ CONFIGURATION TAB
-        - Choose a language and enter compile/run commands.
-        - Set how input is passed (arguments or standard input).
-        - Use 'Save Configuration' to create a config file.
-        - 'Load' and 'Delete' help manage existing config files.
+➤ TEST TAB
+- Click 'Run All Tests' to compile and run student submissions.
+- Results (compile/run/status) are shown in a table instantly.
 
-        ➤ TEST TAB
-        - Click 'Run All Tests' to compile and run student submissions.
-        - Results (compile/run/status) are shown in a table instantly.
-
-        TIPS:
-        - Everything is saved as simple JSON files.
-        - Use the tab buttons — File menu options are not yet active.
-        - Check the About section for version info.
-        """)
-
+TIPS:
+- Everything is saved as simple JSON files.
+- Use the tab buttons — File menu options are not yet active.
+- Check the About section for version info.
+""")
         manual_text.configure(state="disabled")
 
     def _show_about(self):
-        messagebox.showinfo(
-            "About",
-            "Integrated Assignment Environment (IAE) v1.0\n\n"
-            "Developed as part of CE316 Project\n"
-            "\n"
-            "Features:\n"
-            "- Project and Configuration Management\n"
-            "- Automatic Testing of Student Submissions\n"
-            "- JSON-based Save & Load\n\n"
-        )
+        messagebox.showinfo("About", "Integrated Assignment Environment (IAE) v1.0\n\nDeveloped as part of CE316 Project\n\nFeatures:\n- Project and Configuration Management\n- Automatic Testing of Student Submissions\n- JSON-based Save & Load\n")
 
     def show_frame(self, name):
         self.frames[name].tkraise()
 
-
-# === Project Section ===
 
 class ProjectFrame(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent, bg=BG_COLOR)
 
         tk.Label(self, text="Project Page", font=("Arial", 16), bg=BG_COLOR).pack(pady=20)
-
         self.entries = {}
-
         labels = [
             ("Project Name", "project_name"),
             ("Select Config File", "config_file"),
-            ("ZIP Folder", "zip_folder"),
+            ("Folder Path", "zip_folder"),
             ("Input File", "input_file"),
             ("Expected Output File", "expected_output")
         ]
@@ -173,7 +146,6 @@ class ProjectFrame(tk.Frame):
 
         btn_row = tk.Frame(self, bg=BG_COLOR)
         btn_row.pack(pady=20)
-
         ttk.Button(btn_row, text="Save Project", command=self.save_project).pack(side="left", padx=10)
         ttk.Button(btn_row, text="Load Project", command=self.load_project).pack(side="left", padx=10)
 
@@ -185,17 +157,10 @@ class ProjectFrame(tk.Frame):
             "input_file": self.entries["input_file"].cget("text"),
             "expected_output_file": self.entries["expected_output"].cget("text")
         }
-
         test_frame = self.master.master.frames.get("Test")
         if test_frame and hasattr(test_frame, "results"):
             project_data["results"] = test_frame.results
-
-        file_path = fd.asksaveasfilename(
-            defaultextension=".json",
-            filetypes=[("JSON Files", "*.json")],
-            title="Save Project As"
-        )
-
+        file_path = fd.asksaveasfilename(defaultextension=".json", filetypes=[("JSON Files", "*.json")], title="Save Project As")
         if file_path:
             try:
                 with open(file_path, "w") as f:
@@ -205,27 +170,18 @@ class ProjectFrame(tk.Frame):
                 messagebox.showerror("Error", f"Failed to save project:\n{e}")
 
     def load_project(self):
-        file_path = fd.askopenfilename(
-            defaultextension=".json",
-            filetypes=[("JSON Files", "*.json")],
-            title="Open Project File"
-        )
-
+        file_path = fd.askopenfilename(defaultextension=".json", filetypes=[("JSON Files", "*.json")], title="Open Project File")
         if file_path:
             try:
                 with open(file_path, "r") as f:
                     project_data = json.load(f)
-
                 self.entries["project_name"].delete(0, tk.END)
                 self.entries["project_name"].insert(0, project_data.get("project_name", ""))
-
                 self.entries["config_file"].delete(0, tk.END)
                 self.entries["config_file"].insert(0, project_data.get("config_file", ""))
-
                 self.entries["zip_folder"].config(text=project_data.get("zip_folder", "Select File"))
                 self.entries["input_file"].config(text=project_data.get("input_file", "Select File"))
                 self.entries["expected_output"].config(text=project_data.get("expected_output_file", "Select File"))
-
                 messagebox.showinfo("Loaded", f"Project loaded from:\n{file_path}")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to load project:\n{e}")
@@ -235,16 +191,8 @@ class ProjectFrame(tk.Frame):
             path = fd.askdirectory(title="Select Folder")
         else:
             path = fd.askopenfilename(title=f"Select {key.replace('_', ' ').capitalize()} File")
-
         if path:
             self.entries[key].config(text=path)
-
-    def list_config_files(directory):
-        try:
-            return [f for f in os.listdir(directory) if f.endswith(".json")]
-        except FileNotFoundError:
-            return []
-
 
 class ConfigFrame(tk.Frame):
     def __init__(self, parent, controller):
@@ -288,10 +236,8 @@ class ConfigFrame(tk.Frame):
     def show_config_details(self, config):
         for widget in self.detail_frame.winfo_children():
             widget.destroy()
-
         if not config:
             return
-
         ttk.Label(self.detail_frame, text=f"Language: {config.get('language', '')}", font=FONT, background=BG_COLOR).pack(pady=5)
         ttk.Label(self.detail_frame, text=f"Compile: {config.get('compile_command', '')}", font=FONT, background=BG_COLOR).pack(pady=5)
         ttk.Label(self.detail_frame, text=f"Run: {config.get('run_command', '')}", font=FONT, background=BG_COLOR).pack(pady=5)
@@ -305,7 +251,6 @@ class ConfigFrame(tk.Frame):
         if not selection:
             messagebox.showwarning("No Selection", "Please select a configuration to edit.")
             return
-
         config_name = self.language_listbox.get(selection[0])
         path = os.path.join("configs", f"{config_name}.json")
         config = load_configuration(path)
@@ -317,10 +262,8 @@ class ConfigFrame(tk.Frame):
         if not selection:
             messagebox.showwarning("No Selection", "Please select a language to delete.")
             return
-
         config_name = self.language_listbox.get(selection[0])
         path = os.path.join("configs", f"{config_name}.json")
-
         if messagebox.askyesno("Delete", f"Are you sure you want to delete the configuration for {config_name}?"):
             try:
                 os.remove(path)
@@ -342,11 +285,9 @@ class AddConfigWindow(tk.Toplevel):
         self.original_name = original_name
 
         self.entries = {}
-
         row = tk.Frame(self, bg=BG_COLOR)
         row.pack(pady=10, padx=20, anchor="w")
         tk.Label(row, text="Language:", font=FONT, bg=BG_COLOR, width=18, anchor="e").pack(side="left")
-        from core.configuration import POPULAR_LANGUAGES
         self.language_combo = ttk.Combobox(row, values=list(POPULAR_LANGUAGES.keys()), font=FONT, width=30)
         self.language_combo.pack(side="left")
         if existing_config:
@@ -368,13 +309,11 @@ class AddConfigWindow(tk.Toplevel):
             row.pack(pady=10, padx=20, anchor="w")
             label = key.replace("_", " ").title()
             tk.Label(row, text=f"{label}:", font=FONT, bg=BG_COLOR, width=18, anchor="e").pack(side="left")
-
             if key == "input_type":
                 entry = ttk.Combobox(row, values=["Command-line Arguments", "Standard Input"], font=FONT, width=38)
-                entry.set("Command-line Arguments")  # varsayılan
+                entry.set("Command-line Arguments")
             else:
                 entry = ttk.Entry(row, width=40)
-
             entry.pack(side="left")
             self.entries[key] = entry
 
@@ -407,7 +346,6 @@ class AddConfigWindow(tk.Toplevel):
         data = {"language": language}
         for key in self.entries:
             data[key] = self.entries[key].get()
-
         for cmd in [data['compile_command'], data['run_command']]:
             if cmd.strip():
                 first_word = cmd.strip().split()[0]
@@ -418,14 +356,11 @@ class AddConfigWindow(tk.Toplevel):
         data.update({"input_file": "", "expected_output_file": "", "compare_command": "diff output.txt expected.txt"})
         safe_name = config_name.lower().replace(" ", "_")
         file_path = os.path.join("configs", f"{safe_name}.json")
-
-        # Check overwrite if renaming
         if self.original_name and self.original_name.lower() != safe_name:
             try:
                 os.remove(os.path.join("configs", f"{self.original_name.lower()}.json"))
             except FileNotFoundError:
                 pass
-
         save_configuration(data, file_path)
         self.master.populate_language_list()
         messagebox.showinfo("Saved", f"Configuration saved as {file_path}")
@@ -440,29 +375,21 @@ class AddConfigWindow(tk.Toplevel):
             f"🔧 Solution:\n"
             f"→ Make sure '{tool}' is installed and accessible from the terminal or command prompt.\n"
             f"→ You can test this by typing '{tool}' in a terminal.\n\n"
-            f"Example for Windows (GCC):\n"
-            f"  Add C:\\MinGW\\bin to your Environment Variables > PATH.\n\n"
-            f"Example for macOS/Linux (Java):\n"
-            f"  Add export PATH=$PATH:/usr/bin/java to your shell config.\n"
+            f"Example for Windows (GCC):\n  Add C:\\MinGW\\bin to your Environment Variables > PATH.\n\n"
+            f"Example for macOS/Linux (Java):\n  Add export PATH=$PATH:/usr/bin/java to your shell config.\n"
         )
         messagebox.showerror("Missing Tool", help_message)
 
-
-
-# === Test Section ===
 class TestFrame(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent, bg=BG_COLOR)
         self.controller = controller
         self.project_data = {}
-        self.results = []  # REQ 9 için eklendi: test sonuçlarını bellekte tut
+        self.results = []
 
         btn_frame = tk.Frame(self, bg=BG_COLOR)
         btn_frame.pack(pady=10)
-
         ttk.Button(btn_frame, text="Select Project", command=self.load_project_file).pack(side="left", padx=5)
-        ttk.Button(btn_frame, text="Load Student Codes", command=self.select_student_code_directory).pack(side="left",
-                                                                                                          padx=5)
         ttk.Button(btn_frame, text="Run All Tests", command=self.run_all_tests).pack(side="left", padx=5)
 
         columns = ("student_id", "compile_status", "run_status", "result")
@@ -478,24 +405,23 @@ class TestFrame(tk.Frame):
         self.tree.pack(padx=20, pady=10, fill="both", expand=True)
 
     def load_project_file(self):
-        file_path = fd.askopenfilename(
-            defaultextension=".json",
-            filetypes=[("JSON files", "*.json")],
-            title="Select Project File"
-        )
+        file_path = fd.askopenfilename(defaultextension=".json", filetypes=[("JSON files", "*.json")], title="Select Project File")
         if file_path:
             try:
                 with open(file_path, "r") as f:
                     self.project_data = json.load(f)
-                messagebox.showinfo("Loaded", f"Project loaded:\n{file_path}")
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to load project:\n{e}")
 
-    def select_student_code_directory(self):
-        folder_path = fd.askdirectory(title="Select Student Code Directory")
-        if folder_path:
-            self.project_data["student_code_dir"] = folder_path
-            messagebox.showinfo("Loaded", f"Student codes loaded from:\n{folder_path}")
+                student_dir = self.project_data.get("zip_folder")
+                if not student_dir or not os.path.isdir(student_dir):
+                    messagebox.showwarning("Invalid Folder", "Student folder path in the project file is missing or invalid.")
+                    return
+
+                self.project_data["student_code_dir"] = student_dir
+
+                messagebox.showinfo("Loaded", f"Project loaded:\n{file_path}\n\nStudent codes from:\n{student_dir}")
+
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to load project:{e}")
 
     def run_all_tests(self):
         if not self.project_data.get("config_file") or not self.project_data.get("student_code_dir"):
@@ -503,8 +429,17 @@ class TestFrame(tk.Frame):
             return
 
         from core.executor import run_all_submissions
+        # Dosya yolunu kontrol et, eksikse "configs/" ekle
+        config_path = self.project_data["config_file"]
+        if not os.path.isfile(config_path):
+            config_path = os.path.join("configs", config_path)
+            if not os.path.isfile(config_path):
+                messagebox.showerror("Configuration Error", f"Configuration file not found:\n{config_path}")
+                return
+            self.project_data["config_file"] = config_path  # tam yol olarak güncelle
+
         results = run_all_submissions(self.project_data)
-        self.results = results  # REQ 9 için test sonuçları bellekte saklanır
+        self.results = results
 
         for item in self.tree.get_children():
             self.tree.delete(item)
@@ -516,4 +451,3 @@ class TestFrame(tk.Frame):
 if __name__ == "__main__":
     app = IAEApp()
     app.mainloop()
-
