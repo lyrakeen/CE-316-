@@ -231,9 +231,13 @@ class ProjectFrame(tk.Frame):
                 messagebox.showerror("Error", f"Failed to load project:\n{e}")
 
     def select_file(self, key):
-        file_path = fd.askopenfilename(title=f"Select {key.replace('_', ' ').capitalize()} File")
-        if file_path:
-            self.entries[key].config(text=file_path)
+        if key == "zip_folder":
+            path = fd.askdirectory(title="Select Folder")
+        else:
+            path = fd.askopenfilename(title=f"Select {key.replace('_', ' ').capitalize()} File")
+
+        if path:
+            self.entries[key].config(text=path)
 
     def list_config_files(directory):
         try:
