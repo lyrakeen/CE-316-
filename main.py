@@ -259,6 +259,7 @@ class ConfigFrame(tk.Frame):
         btn_frame = tk.Frame(self, bg=BG_COLOR)
         btn_frame.pack(pady=10)
         ttk.Button(btn_frame, text="Add New Configuration", command=self.show_add_config_page).pack(side="left", padx=5)
+        ttk.Button(btn_frame, text="Edit Selected", command=self.edit_selected_config).pack(side="left", padx=5)
         ttk.Button(btn_frame, text="Delete Selected", command=self.delete_selected_config).pack(side="left", padx=5)
 
         self.detail_frame = tk.Frame(self, bg=BG_COLOR)
@@ -272,15 +273,15 @@ class ConfigFrame(tk.Frame):
             os.makedirs("configs")
         for filename in os.listdir("configs"):
             if filename.endswith(".json"):
-                lang = os.path.splitext(filename)[0].capitalize()
-                self.language_listbox.insert(tk.END, lang)
+                name = os.path.splitext(filename)[0]
+                self.language_listbox.insert(tk.END, name)
 
     def on_language_select(self, event):
         selection = self.language_listbox.curselection()
         if not selection:
             return
-        language = self.language_listbox.get(selection[0])
-        path = os.path.join("configs", f"{language.lower()}.json")
+        config_name = self.language_listbox.get(selection[0])
+        path = os.path.join("configs", f"{config_name}.json")
         config = load_configuration(path)
         self.show_config_details(config)
 
@@ -291,17 +292,25 @@ class ConfigFrame(tk.Frame):
         if not config:
             return
 
-        ttk.Label(self.detail_frame, text=f"Language: {config.get('language', '')}", font=FONT,
-                  background=BG_COLOR).pack(pady=5)
-        ttk.Label(self.detail_frame, text=f"Compile: {config.get('compile_command', '')}", font=FONT,
-                  background=BG_COLOR).pack(pady=5)
-        ttk.Label(self.detail_frame, text=f"Run: {config.get('run_command', '')}", font=FONT, background=BG_COLOR).pack(
-            pady=5)
-        ttk.Label(self.detail_frame, text=f"Input Type: {config.get('input_type', '')}", font=FONT,
-                  background=BG_COLOR).pack(pady=5)
+        ttk.Label(self.detail_frame, text=f"Language: {config.get('language', '')}", font=FONT, background=BG_COLOR).pack(pady=5)
+        ttk.Label(self.detail_frame, text=f"Compile: {config.get('compile_command', '')}", font=FONT, background=BG_COLOR).pack(pady=5)
+        ttk.Label(self.detail_frame, text=f"Run: {config.get('run_command', '')}", font=FONT, background=BG_COLOR).pack(pady=5)
+        ttk.Label(self.detail_frame, text=f"Input Type: {config.get('input_type', '')}", font=FONT, background=BG_COLOR).pack(pady=5)
 
     def show_add_config_page(self):
         AddConfigWindow(self)
+
+    def edit_selected_config(self):
+        selection = self.language_listbox.curselection()
+        if not selection:
+            messagebox.showwarning("No Selection", "Please select a configuration to edit.")
+            return
+
+        config_name = self.language_listbox.get(selection[0])
+        path = os.path.join("configs", f"{config_name}.json")
+        config = load_configuration(path)
+        if config:
+            AddConfigWindow(self, existing_config=config, original_name=config_name)
 
     def delete_selected_config(self):
         selection = self.language_listbox.curselection()
@@ -309,27 +318,28 @@ class ConfigFrame(tk.Frame):
             messagebox.showwarning("No Selection", "Please select a language to delete.")
             return
 
-        language = self.language_listbox.get(selection[0])
-        path = os.path.join("configs", f"{language.lower()}.json")
+        config_name = self.language_listbox.get(selection[0])
+        path = os.path.join("configs", f"{config_name}.json")
 
-        if messagebox.askyesno("Delete", f"Are you sure you want to delete the configuration for {language}?"):
+        if messagebox.askyesno("Delete", f"Are you sure you want to delete the configuration for {config_name}?"):
             try:
                 os.remove(path)
                 self.populate_language_list()
                 for widget in self.detail_frame.winfo_children():
                     widget.destroy()
-                messagebox.showinfo("Deleted", f"{language} configuration deleted.")
+                messagebox.showinfo("Deleted", f"{config_name} configuration deleted.")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to delete configuration: {e}")
 
 
 class AddConfigWindow(tk.Toplevel):
-    def __init__(self, master):
+    def __init__(self, master, existing_config=None, original_name=None):
         super().__init__(master)
-        self.title("Add New Configuration")
-        self.geometry("500x400")
+        self.title("Edit Configuration" if existing_config else "Add New Configuration")
+        self.geometry("500x450")
         self.master = master
         self.configure(bg=BG_COLOR)
+        self.original_name = original_name
 
         self.entries = {}
 
@@ -339,16 +349,42 @@ class AddConfigWindow(tk.Toplevel):
         from core.configuration import POPULAR_LANGUAGES
         self.language_combo = ttk.Combobox(row, values=list(POPULAR_LANGUAGES.keys()), font=FONT, width=30)
         self.language_combo.pack(side="left")
-        self.language_combo.bind("<<ComboboxSelected>>", self.autofill_fields)
+        if existing_config:
+            self.language_combo.set(existing_config.get("language", ""))
+            self.language_combo.config(state="disabled")
+        else:
+            self.language_combo.bind("<<ComboboxSelected>>", self.autofill_fields)
+
+        row = tk.Frame(self, bg=BG_COLOR)
+        row.pack(pady=10, padx=20, anchor="w")
+        tk.Label(row, text="Config Name:", font=FONT, bg=BG_COLOR, width=18, anchor="e").pack(side="left")
+        self.name_entry = ttk.Entry(row, width=40)
+        self.name_entry.pack(side="left")
+        if existing_config and original_name:
+            self.name_entry.insert(0, original_name)
 
         for key in ["compile_command", "run_command", "input_type"]:
             row = tk.Frame(self, bg=BG_COLOR)
             row.pack(pady=10, padx=20, anchor="w")
             label = key.replace("_", " ").title()
             tk.Label(row, text=f"{label}:", font=FONT, bg=BG_COLOR, width=18, anchor="e").pack(side="left")
-            entry = ttk.Entry(row, width=40)
+
+            if key == "input_type":
+                entry = ttk.Combobox(row, values=["Command-line Arguments", "Standard Input"], font=FONT, width=38)
+                entry.set("Command-line Arguments")  # varsayılan
+            else:
+                entry = ttk.Entry(row, width=40)
+
             entry.pack(side="left")
             self.entries[key] = entry
+
+        if existing_config:
+            for key in self.entries:
+                value = existing_config.get(key, "")
+                if isinstance(self.entries[key], ttk.Combobox):
+                    self.entries[key].set(value)
+                else:
+                    self.entries[key].insert(0, value)
 
         ttk.Button(self, text="Save Configuration", command=self.save_new_config).pack(pady=20)
 
@@ -363,8 +399,9 @@ class AddConfigWindow(tk.Toplevel):
 
     def save_new_config(self):
         language = self.language_combo.get()
-        if not language:
-            messagebox.showerror("Missing Info", "Please select a language.")
+        config_name = self.name_entry.get().strip()
+        if not language or not config_name:
+            messagebox.showerror("Missing Info", "Please select a language and enter a config name.")
             return
 
         data = {"language": language}
@@ -379,7 +416,16 @@ class AddConfigWindow(tk.Toplevel):
                     return
 
         data.update({"input_file": "", "expected_output_file": "", "compare_command": "diff output.txt expected.txt"})
-        file_path = os.path.join("configs", f"{language.strip().lower()}.json")
+        safe_name = config_name.lower().replace(" ", "_")
+        file_path = os.path.join("configs", f"{safe_name}.json")
+
+        # Check overwrite if renaming
+        if self.original_name and self.original_name.lower() != safe_name:
+            try:
+                os.remove(os.path.join("configs", f"{self.original_name.lower()}.json"))
+            except FileNotFoundError:
+                pass
+
         save_configuration(data, file_path)
         self.master.populate_language_list()
         messagebox.showinfo("Saved", f"Configuration saved as {file_path}")
@@ -400,6 +446,7 @@ class AddConfigWindow(tk.Toplevel):
             f"  Add export PATH=$PATH:/usr/bin/java to your shell config.\n"
         )
         messagebox.showerror("Missing Tool", help_message)
+
 
 
 # === Test Section ===
