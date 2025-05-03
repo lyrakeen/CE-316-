@@ -8,11 +8,13 @@ import os
 from tkinter import messagebox
 import json
 from shutil import which
+
 FONT = ("Segoe UI", 11)
 BG_COLOR = "#f4f4f4"
 BTN_COLOR = "#dcdcdc"
 ACCENT_COLOR = "#4CAF50"
 HOVER_COLOR = "#c0c0c0"
+
 
 class IAEApp(tk.Tk):
     def __init__(self):
@@ -38,7 +40,6 @@ class IAEApp(tk.Tk):
         self.container = tk.Frame(self, bg="blue", width=800, height=600)
         self.container.grid(row=0, column=1, sticky="nsew")
         self.container.pack_propagate(False)
-
 
         self.frames = {}
         for F in (ProjectFrame, ConfigFrame, TestFrame):
@@ -131,7 +132,6 @@ class IAEApp(tk.Tk):
         self.frames[name].tkraise()
 
 
-
 # === Project Section ===
 
 class ProjectFrame(tk.Frame):
@@ -155,17 +155,21 @@ class ProjectFrame(tk.Frame):
             row.pack(fill="x", padx=20, pady=8)
 
             tk.Label(row, text=text, font=FONT, bg=BG_COLOR, width=20, anchor="e").pack(side="left")
+
             if key == "config_file":
                 combo = ttk.Combobox(row, width=37, state="readonly")
                 combo['values'] = list_config_files("configs")
                 combo.pack(side="left", padx=10)
                 self.entries[key] = combo
                 combo.bind("<Button-1>", lambda e: combo.configure(values=list_config_files("configs")))
+            elif key in ["zip_folder", "input_file", "expected_output"]:
+                btn = ttk.Button(row, text="Select File", command=lambda k=key: self.select_file(k), width=10)
+                btn.pack(side="left", padx=100)
+                self.entries[key] = btn
             else:
                 entry = ttk.Entry(row, width=40)
                 entry.pack(side="left", padx=10)
                 self.entries[key] = entry
-
 
         btn_row = tk.Frame(self, bg=BG_COLOR)
         btn_row.pack(pady=20)
@@ -177,12 +181,11 @@ class ProjectFrame(tk.Frame):
         project_data = {
             "project_name": self.entries["project_name"].get(),
             "config_file": self.entries["config_file"].get(),
-            "zip_folder": self.entries["zip_folder"].get(),
-            "input_file": self.entries["input_file"].get(),
-            "expected_output_file": self.entries["expected_output"].get()
+            "zip_folder": self.entries["zip_folder"].cget("text"),
+            "input_file": self.entries["input_file"].cget("text"),
+            "expected_output_file": self.entries["expected_output"].cget("text")
         }
 
-        # REQ 9: test sonuçlarını projeye dahil et
         test_frame = self.master.master.frames.get("Test")
         if test_frame and hasattr(test_frame, "results"):
             project_data["results"] = test_frame.results
@@ -200,7 +203,6 @@ class ProjectFrame(tk.Frame):
                 messagebox.showinfo("Saved", f"Project saved to:\n{file_path}")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to save project:\n{e}")
-
 
     def load_project(self):
         file_path = fd.askopenfilename(
@@ -220,20 +222,24 @@ class ProjectFrame(tk.Frame):
                 self.entries["config_file"].delete(0, tk.END)
                 self.entries["config_file"].insert(0, project_data.get("config_file", ""))
 
-                self.entries["zip_folder"].delete(0, tk.END)
-                self.entries["zip_folder"].insert(0, project_data.get("zip_folder", ""))
-
-                self.entries["input_file"].delete(0, tk.END)
-                self.entries["input_file"].insert(0, project_data.get("input_file", ""))
-
-                self.entries["expected_output"].delete(0, tk.END)
-                self.entries["expected_output"].insert(0, project_data.get("expected_output_file", ""))
+                self.entries["zip_folder"].config(text=project_data.get("zip_folder", "Select File"))
+                self.entries["input_file"].config(text=project_data.get("input_file", "Select File"))
+                self.entries["expected_output"].config(text=project_data.get("expected_output_file", "Select File"))
 
                 messagebox.showinfo("Loaded", f"Project loaded from:\n{file_path}")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to load project:\n{e}")
 
+    def select_file(self, key):
+        file_path = fd.askopenfilename(title=f"Select {key.replace('_', ' ').capitalize()} File")
+        if file_path:
+            self.entries[key].config(text=file_path)
 
+    def list_config_files(directory):
+        try:
+            return [f for f in os.listdir(directory) if f.endswith(".json")]
+        except FileNotFoundError:
+            return []
 
 
 class ConfigFrame(tk.Frame):
@@ -281,10 +287,14 @@ class ConfigFrame(tk.Frame):
         if not config:
             return
 
-        ttk.Label(self.detail_frame, text=f"Language: {config.get('language', '')}", font=FONT, background=BG_COLOR).pack(pady=5)
-        ttk.Label(self.detail_frame, text=f"Compile: {config.get('compile_command', '')}", font=FONT, background=BG_COLOR).pack(pady=5)
-        ttk.Label(self.detail_frame, text=f"Run: {config.get('run_command', '')}", font=FONT, background=BG_COLOR).pack(pady=5)
-        ttk.Label(self.detail_frame, text=f"Input Type: {config.get('input_type', '')}", font=FONT, background=BG_COLOR).pack(pady=5)
+        ttk.Label(self.detail_frame, text=f"Language: {config.get('language', '')}", font=FONT,
+                  background=BG_COLOR).pack(pady=5)
+        ttk.Label(self.detail_frame, text=f"Compile: {config.get('compile_command', '')}", font=FONT,
+                  background=BG_COLOR).pack(pady=5)
+        ttk.Label(self.detail_frame, text=f"Run: {config.get('run_command', '')}", font=FONT, background=BG_COLOR).pack(
+            pady=5)
+        ttk.Label(self.detail_frame, text=f"Input Type: {config.get('input_type', '')}", font=FONT,
+                  background=BG_COLOR).pack(pady=5)
 
     def show_add_config_page(self):
         AddConfigWindow(self)
@@ -297,7 +307,6 @@ class ConfigFrame(tk.Frame):
 
         language = self.language_listbox.get(selection[0])
         path = os.path.join("configs", f"{language.lower()}.json")
-
 
         if messagebox.askyesno("Delete", f"Are you sure you want to delete the configuration for {language}?"):
             try:
@@ -372,7 +381,6 @@ class AddConfigWindow(tk.Toplevel):
         messagebox.showinfo("Saved", f"Configuration saved as {file_path}")
         self.destroy()
 
-
     def show_tool_error(self, tool):
         help_message = (
             f"The command '{tool}' could not be found on your system.\n\n"
@@ -389,7 +397,7 @@ class AddConfigWindow(tk.Toplevel):
         )
         messagebox.showerror("Missing Tool", help_message)
 
-        
+
 # === Test Section ===
 class TestFrame(tk.Frame):
     def __init__(self, parent, controller):
@@ -402,7 +410,8 @@ class TestFrame(tk.Frame):
         btn_frame.pack(pady=10)
 
         ttk.Button(btn_frame, text="Select Project", command=self.load_project_file).pack(side="left", padx=5)
-        ttk.Button(btn_frame, text="Load Student Codes", command=self.select_student_code_directory).pack(side="left", padx=5)
+        ttk.Button(btn_frame, text="Load Student Codes", command=self.select_student_code_directory).pack(side="left",
+                                                                                                          padx=5)
         ttk.Button(btn_frame, text="Run All Tests", command=self.run_all_tests).pack(side="left", padx=5)
 
         columns = ("student_id", "compile_status", "run_status", "result")
@@ -451,7 +460,6 @@ class TestFrame(tk.Frame):
 
         for student_id, compile_status, run_status, result in results:
             self.tree.insert("", "end", values=(student_id, compile_status, run_status, result))
-
 
 
 if __name__ == "__main__":
