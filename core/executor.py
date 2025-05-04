@@ -1,4 +1,5 @@
 import subprocess
+from contextlib import nullcontext
 from core.configuration import load_configuration
 import os
 
@@ -7,7 +8,7 @@ def compile_code(compile_command, working_dir=None):
         result = subprocess.run(
             compile_command,
             shell=True,
-            cwd=working_dir,  # >>> burası kritik
+            cwd=working_dir,
             capture_output=True,
             text=True
         )
@@ -24,8 +25,8 @@ def compile_code(compile_command, working_dir=None):
 
 def run_executable(run_command, input_file=None, output_file=None, working_dir=None):
     try:
-        with open(input_file, 'r') if input_file else None as inp, \
-             open(output_file, 'w') if output_file else None as out:
+        with open(input_file, 'r') if input_file else nullcontext() as inp, \
+             open(output_file, 'w') if output_file else nullcontext() as out:
 
             result = subprocess.run(
                 run_command,
@@ -34,7 +35,7 @@ def run_executable(run_command, input_file=None, output_file=None, working_dir=N
                 stdout=out,
                 stderr=subprocess.PIPE,
                 text=True,
-                cwd=working_dir  # BURASI KRİTİK
+                cwd=working_dir
             )
 
         if result.returncode == 0:
@@ -104,7 +105,10 @@ def run_all_submissions(project_data):
         output_path = os.path.join(student_path, f"{student_root}_output.txt")
         run_cmd = config["run_command"].replace("{exec}", exec_name).strip()
 
-        if config.get("input_type") == "Command-line Arguments" and input_file:
+        # Giriş türünü kontrol et
+        input_type = config.get("input_type", "Standard Input")
+
+        if input_type == "Command-line Arguments" and input_file:
             try:
                 with open(input_file, "r") as f:
                     args = f.read().strip()
@@ -112,8 +116,15 @@ def run_all_submissions(project_data):
                 input_for_run = None
             except Exception:
                 input_for_run = None
-        else:
+
+        elif input_type == "Standard Input":
             input_for_run = input_file
+
+        elif input_type == "None":
+            input_for_run = None
+
+        else:
+            input_for_run = None  # Güvenli fallback
 
         run_ok, _ = run_executable(
             run_cmd,

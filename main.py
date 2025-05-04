@@ -313,7 +313,7 @@ class AddConfigWindow(tk.Toplevel):
             label = key.replace("_", " ").title()
             tk.Label(row, text=f"{label}:", font=FONT, bg=BG_COLOR, width=18, anchor="e").pack(side="left")
             if key == "input_type":
-                entry = ttk.Combobox(row, values=["Command-line Arguments", "Standard Input"], font=FONT, width=38)
+                entry = ttk.Combobox(row, values=["Command-line Arguments", "Standard Input","None"], font=FONT, width=38)
                 entry.set("Command-line Arguments")
             else:
                 entry = ttk.Entry(row, width=40)
