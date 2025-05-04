@@ -128,7 +128,7 @@ def run_all_submissions(project_data):
             continue
 
         compare_cmd = config.get("compare_command", "").strip()
-        if compare_cmd:
+        if compare_cmd and "actual.txt" in compare_cmd and "expected.txt" in compare_cmd:
             compare_cmd = compare_cmd.replace("actual.txt", output_path).replace("expected.txt", expected_file)
             try:
                 result_obj = subprocess.run(compare_cmd, shell=True, capture_output=True, text=True)
