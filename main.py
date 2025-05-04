@@ -80,26 +80,29 @@ class IAEApp(tk.Tk):
 
         manual_text.insert("1.0", """Welcome to the Integrated Assignment Environment (IAE)!
 
-➤ PROJECT TAB
-- Fill in project name, config file path, ZIP folder, input and expected output files.
-- Use 'Save Project' to store your setup as a JSON file.
-- Load a previous setup anytime with 'Load Project'.
+    ➤ PROJECT TAB
+    - Enter a project name, select a configuration file (.json), and choose the ZIP folder containing student submissions.
+    - You also need to provide two text files: 
+      • one for input (e.g., numbers to be sorted),
+      • one for the expected output (e.g., sorted result).
+    - You can save or load your entire project as a JSON file.
 
-➤ CONFIGURATION TAB
-- Choose a language and enter compile/run commands.
-- Set how input is passed (arguments or standard input).
-- Use 'Save Configuration' to create a config file.
-- 'Load' and 'Delete' help manage existing config files.
+    ➤ CONFIGURATION TAB
+    - Choose a programming language.
+    - Enter the compile command (leave blank if not needed) and the run command.
+    - Select how input will be passed: Command-line Arguments or Standard Input.
+    - You can add, delete, or edit configurations.
 
-➤ TEST TAB
-- Click 'Run All Tests' to compile and run student submissions.
-- Results (compile/run/status) are shown in a table instantly.
+    ➤ TEST TAB
+    - Click "Run All Tests" to unzip submissions, compile (if needed), run the programs, and compare outputs.
+    - A results table will show compile status, run status, and whether the output is correct.
 
-TIPS:
-- Everything is saved as simple JSON files.
-- Use the tab buttons — File menu options are not yet active.
-- Check the About section for version info.
-""")
+    TIPS:
+    - Config and project files are saved as editable JSONs.
+    - You can define different configurations even for the same language (e.g., Java1, Java2).
+    - If a language doesn’t require compilation (like Python), just leave that part empty.
+
+    """)
         manual_text.configure(state="disabled")
 
     def _show_about(self):
