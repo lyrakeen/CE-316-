@@ -5,7 +5,7 @@ from core.configuration import save_configuration, load_configuration, POPULAR_L
 import os
 import json
 from shutil import which
-
+import zipfile
 FONT = ("Segoe UI", 11)
 BG_COLOR = "#f4f4f4"
 BTN_COLOR = "#dcdcdc"
@@ -13,15 +13,51 @@ ACCENT_COLOR = "#4CAF50"
 HOVER_COLOR = "#c0c0c0"
 
 
+def setup_styles():
+    style = ttk.Style()
+    style.theme_use("classic")
+    style.configure("Green.TButton",
+                    foreground="white",
+                    background="#388e3c",
+                    font=("Segoe UI", 10, "bold"),
+                    padding=10)
+    style.map("Green.TButton",
+              background=[("active", "#2e7d32"), ("pressed", "#1b5e20")])
+    style.configure("TButton", font=("Segoe UI", 11), padding=8)
+    style.map("TButton",
+              background=[("active", "#c0c0c0")],
+              relief=[("pressed", "sunken"), ("!pressed", "flat")])
+    style.configure("Treeview.Heading", font=("Segoe UI", 11, "bold"))
+    style.configure("Treeview", font=("Segoe UI", 11), rowheight=30)
+
+
 class IAEApp(tk.Tk):
+
     def __init__(self):
+
+        setup_styles()
+
         super().__init__()
+
+        style = ttk.Style(self)
+        style.theme_use("classic")
+
+        style.configure("Green.TButton",
+                        foreground="white",
+                        background="#388e3c",
+                        font=("Segoe UI", 10, "bold"),
+                        padding=10)
+
+        style.map("Green.TButton",
+                  background=[("active", "#2e7d32"), ("pressed", "#1b5e20")],
+                  foreground=[("disabled", "#cccccc")])
+
         self.title("Integrated Assignment Environment (IAE)")
         self.geometry("1200x700")
         self.configure(bg=BG_COLOR)
         self._create_menu()
 
-        style = ttk.Style(self)
+
         style.configure("TButton", font=FONT, padding=8)
         style.map("TButton", background=[("active", HOVER_COLOR)], relief=[("pressed", "sunken"), ("!pressed", "flat")])
 
@@ -48,6 +84,13 @@ class IAEApp(tk.Tk):
             btn.pack(pady=30, fill="x", padx=20)
 
         self.show_frame("Project")
+
+        self.protocol("WM_DELETE_WINDOW", self.on_close)
+
+    def on_close(self):
+        self.destroy()
+        import sys
+        sys.exit()
 
     def _create_menu(self):
         menubar = tk.Menu(self)
@@ -122,7 +165,7 @@ class ProjectFrame(tk.Frame):
             ("Project Name", "project_name"),
             ("Select Config File", "config_file"),
             ("Folder Path", "zip_folder"),
-            ("Input File", "input_file"),
+            ("Input File (Optional)", "input_file"),
             ("Expected Output File", "expected_output")
         ]
 
@@ -133,17 +176,22 @@ class ProjectFrame(tk.Frame):
             tk.Label(row, text=text, font=FONT, bg=BG_COLOR, width=20, anchor="e").pack(side="left")
 
             if key == "config_file":
-                combo = ttk.Combobox(row, width=37, state="readonly")
+                combo = ttk.Combobox(row, width=20, state="readonly")
                 combo['values'] = list_config_files("configs")
                 combo.pack(side="left", padx=10)
                 self.entries[key] = combo
                 combo.bind("<Button-1>", lambda e: combo.configure(values=list_config_files("configs")))
             elif key in ["zip_folder", "input_file", "expected_output"]:
-                btn = ttk.Button(row, text="Select File", command=lambda k=key: self.select_file(k), width=10)
-                btn.pack(side="left", padx=100)
+                if key == "zip_folder":
+                    btn = ttk.Button(row, text="Select Folder", command=lambda k=key: self.select_file(k), width=50)
+                    btn.pack(side="left", padx=10)
+                else:
+                    btn = ttk.Button(row, text="Select File", command=lambda k=key: self.select_file(k), width=50)
+                    btn.pack(side="left", padx=10)
+
                 self.entries[key] = btn
             else:
-                entry = ttk.Entry(row, width=40)
+                entry = ttk.Entry(row, width=20)
                 entry.pack(side="left", padx=10)
                 self.entries[key] = entry
 
@@ -182,20 +230,84 @@ class ProjectFrame(tk.Frame):
                 self.entries["project_name"].insert(0, project_data.get("project_name", ""))
                 self.entries["config_file"].delete(0, tk.END)
                 self.entries["config_file"].insert(0, project_data.get("config_file", ""))
-                self.entries["zip_folder"].config(text=project_data.get("zip_folder", "Select File"))
+                self.entries["zip_folder"].config(text=project_data.get("zip_folder", "Select Folder"))
                 self.entries["input_file"].config(text=project_data.get("input_file", "Select File"))
                 self.entries["expected_output"].config(text=project_data.get("expected_output_file", "Select File"))
                 messagebox.showinfo("Loaded", f"Project loaded from:\n{file_path}")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to load project:\n{e}")
 
+
+
     def select_file(self, key):
-        if key == "zip_folder":
-            path = fd.askdirectory(title="Select Folder")
-        else:
-            path = fd.askopenfilename(title=f"Select {key.replace('_', ' ').capitalize()} File")
-        if path:
-            self.entries[key].config(text=path)
+
+
+
+        if key != "zip_folder":
+            file_path = fd.askopenfilename(title=f"Select {key.replace('_', ' ').capitalize()} File")
+            if file_path:
+                self.entries[key].config(text=file_path)
+            return
+
+
+
+
+        popup = tk.Toplevel(self)
+        popup.title("Select ZIP Folder and Extraction Folder")
+        popup.geometry("500x200")
+        popup.minsize(500, 200)
+
+        selected_zip_dir = tk.StringVar(value="Not selected")
+
+        selected_extract_dir = tk.StringVar(value="Not selected")
+
+        def browse_zip_folder():
+            path = fd.askdirectory(title="Select Folder Containing ZIP Files")
+            if path:
+                selected_zip_dir.set(path)
+
+
+        def browse_extract_folder():
+            path = fd.askdirectory(title="Select Folder to Extract ZIP Files Into")
+            if path:
+                selected_extract_dir.set(path)
+
+        def extract_and_close():
+            zip_dir = selected_zip_dir.get()
+            extract_root = selected_extract_dir.get()
+
+            if not os.path.isdir(zip_dir) or not os.path.isdir(extract_root):
+                messagebox.showerror("Error", "Please select both folders.")
+                return
+
+            zip_files = [f for f in os.listdir(zip_dir) if f.lower().endswith(".zip")]
+            if not zip_files:
+                messagebox.showwarning("No ZIP Files", "No ZIP files found in the selected folder.")
+                return
+
+            for zip_name in zip_files:
+                zip_path = os.path.join(zip_dir, zip_name)
+                extract_to = os.path.join(extract_root, os.path.splitext(zip_name)[0])
+                os.makedirs(extract_to, exist_ok=True)
+                try:
+                    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                        zip_ref.extractall(extract_to)
+                except Exception as e:
+                    messagebox.showerror("Extraction Failed", f"Failed to extract {zip_name}:\n{e}")
+
+            self.entries[key].config(text=extract_root)
+            popup.destroy()
+
+        # UI Layout
+        tk.Label(popup, text="Select folder containing ZIP files:").pack(pady=(10, 0))
+        tk.Button(popup, text="Select ZIP Folder", command=browse_zip_folder, width=15).pack()
+
+        tk.Label(popup, text="Select folder to extract ZIPs into:").pack(pady=(10, 0))
+        tk.Button(popup, text="Select Output Folder", command=browse_extract_folder, width=15).pack()
+
+        ttk.Button(popup, text="Extract and Confirm",
+                   command=extract_and_close,
+                   style="Green.TButton").pack(pady=15)
 
 class ConfigFrame(tk.Frame):
     def __init__(self, parent, controller):
@@ -393,10 +505,11 @@ class TestFrame(tk.Frame):
         btn_frame = tk.Frame(self, bg=BG_COLOR)
         btn_frame.pack(pady=10)
         ttk.Button(btn_frame, text="Select Project", command=self.load_project_file).pack(side="left", padx=5)
-        ttk.Button(btn_frame, text="Run All Tests", command=self.run_all_tests).pack(side="left", padx=5)
+        ttk.Button(btn_frame, text="Run All Tests", command=self.run_all_tests, style="Green.TButton").pack(side="left", padx=5)
 
         columns = ("student_id", "compile_status", "run_status", "result")
         self.tree = ttk.Treeview(self, columns=columns, show="headings", height=20)
+
         style = ttk.Style()
         style.configure("Treeview.Heading", font=(FONT[0], 11, "bold"))
         style.configure("Treeview", font=FONT, rowheight=30)
@@ -432,14 +545,14 @@ class TestFrame(tk.Frame):
             return
 
         from core.executor import run_all_submissions
-        # Dosya yolunu kontrol et, eksikse "configs/" ekle
+
         config_path = self.project_data["config_file"]
         if not os.path.isfile(config_path):
             config_path = os.path.join("configs", config_path)
             if not os.path.isfile(config_path):
                 messagebox.showerror("Configuration Error", f"Configuration file not found:\n{config_path}")
                 return
-            self.project_data["config_file"] = config_path  # tam yol olarak güncelle
+            self.project_data["config_file"] = config_path
 
         results = run_all_submissions(self.project_data)
         self.results = results
@@ -452,5 +565,8 @@ class TestFrame(tk.Frame):
 
 
 if __name__ == "__main__":
+    root = tk.Tk()
+    root.withdraw()
+
     app = IAEApp()
     app.mainloop()

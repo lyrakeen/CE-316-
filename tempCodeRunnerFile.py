@@ -1,3 +1,11 @@
+import os
+import tkinter as tk
+from tkinter import ttk
+
+from core.configuration import load_configuration
+from main import BG_COLOR, FONT
+
+
 class ConfigFrame(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent, bg=BG_COLOR)
