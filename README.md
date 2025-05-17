@@ -1,48 +1,52 @@
 # Integrated Assignment Environment (IAE)
 
-IAE is a user-friendly assignment evaluation tool for lecturers. It allows batch testing of student code submissions using custom configurations.
+IAE is a simple but powerful tool to evaluate programming assignments in bulk.  
+It allows lecturers to compile, run, and test student submissions via custom configurations.
 
 ## 💡 Features
-- Create, edit, delete custom configurations for different languages (Java, Python, Ruby etc.)
-- Supports both **standard input** and **command-line arguments**
-- Load student submissions from a folder
-- Automatically compiles and runs submissions
-- Displays compile/run status and result (output match)
-- Saves projects for later use
-- Editable configurations for multi-class languages (e.g. Java)
+- Project-based assignment management
+- Multi-language configurations (C, Java, Python, etc.)
+- Command-line arguments & standard input support
+- Batch processing of student ZIP submissions
+- Real-time result table (compile, run, compare status)
+- Config edit/delete and multi-config support per language
+- Input/Output file handling with .txt files
 
-## Project Flow
 
-1. **Project Tab**:  
-   - Enter a project name  
-   - Select a configuration (`.json` format)  
-   - Choose student ZIP folder  
-   - Attach input and expected output files  
-   - Save or load project
+## 🧪 How It Works
 
-2. **Configuration Tab**:  
-   - Create new configs or edit existing ones  
-   - Fill in compile/run commands manually or auto-fill by language  
-   - Choose input method (Standard Input / Command-line Arguments)
+### Project Tab
+- Define project name, select a config, input/output files and submission folder.
+- ZIP folder selection triggers extraction process.
+- Save/load your project state as JSON.
 
-3. **Test Tab**:  
-   - Select project and click **Run All Tests**  
-   - See real-time compile/run results and correctness check
+### Configuration Tab
+- Create new configurations or edit existing ones.
+- Compile and run commands are flexible per language.
+- Input Type can be 'Standard Input' or 'Command-line Arguments' via dropdown.
+- Configs saved in `/configs` as JSON.
 
-## 📁 Notes
-- All configurations are saved under `/configs` as JSON
-- Project settings are stored in `.json` files  
-- Input/output files are separate `.txt` files provided by the user
+### Test Tab
+- Load project and run tests on all student submissions.
+- Results are displayed instantly (compile/run/output match).
+- Supports languages that require multiple class files (Java) as well as interpreted languages (Python).
 
-## Example Commands
+## 📁 Folder Structure
+- `/configs`: Configuration files (.json)
+- `/student_submissions`: Folder with ZIPs
+- Input/output files: Provided as `.txt`
+
+## 📝 Example Commands
 **Java**  
-Compile: `javac Main.java`  
-Run: `java Main`
+Compile: `javac *.java`  
+Run: `java MainClass`
 
 **Python**  
 Compile: *(leave empty)*  
-Run: `python3 main.py`
+Run: `python main.py`
+
 
 ---
+
 
 > This project is building as part of CE316 coursework.

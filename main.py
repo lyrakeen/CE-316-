@@ -116,7 +116,8 @@ class IAEApp(tk.Tk):
     def _show_manual(self):
         manual_window = tk.Toplevel(self)
         manual_window.title("User Manual")
-        manual_window.geometry("600x500")
+        manual_window.geometry("650x550")
+        manual_window.configure(bg="#d9d5c4")
 
         manual_text = tk.Text(manual_window, wrap="word", font=FONT)
         manual_text.pack(expand=True, fill="both", padx=10, pady=10)
@@ -124,29 +125,30 @@ class IAEApp(tk.Tk):
         manual_text.insert("1.0", """Welcome to the Integrated Assignment Environment (IAE)!
 
     ➤ PROJECT TAB
-    - Enter a project name, select a configuration file (.json), and choose the ZIP folder containing student submissions.
-    - You also need to provide two text files: 
-      • one for input (e.g., numbers to be sorted),
-      • one for the expected output (e.g., sorted result).
-    - You can save or load your entire project as a JSON file.
+- Enter a project name and select a configuration.
+- Choose the folder containing student ZIP submissions.
+- Provide input and expected output text files.
+- Save the project setup or load an existing one.
+- Folder selection opens a ZIP extraction window.
 
-    ➤ CONFIGURATION TAB
-    - Choose a programming language.
-    - Enter the compile command (leave blank if not needed) and the run command.
-    - Select how input will be passed: Command-line Arguments or Standard Input.
-    - You can add, delete, or edit configurations.
+➤ CONFIGURATION TAB
+- Add, edit, or delete configurations.
+- Define language, compile and run commands.
+- Set input type (Standard Input / Command-line Arguments) via dropdown.
+- Each configuration is saved as a JSON file.
 
-    ➤ TEST TAB
-    - Click "Run All Tests" to unzip submissions, compile (if needed), run the programs, and compare outputs.
-    - A results table will show compile status, run status, and whether the output is correct.
+➤ TEST TAB
+- Select a project and run tests for all students.
+- Results are displayed in a table (compile/run/status).
+- Outputs are compared against expected results automatically.
 
-    TIPS:
-    - Config and project files are saved as editable JSONs.
-    - You can define different configurations even for the same language (e.g., Java1, Java2).
-    - If a language doesn’t require compilation (like Python), just leave that part empty.
-
-    """)
+TIPS:
+- Input and expected output are plain .txt files.
+- Configurations are reusable, editable JSONs.
+- Python-like languages don’t need compile commands (leave empty).
+""")
         manual_text.configure(state="disabled")
+        manual_text.configure(bg="#d9d5c4")
 
     def _show_about(self):
         messagebox.showinfo("About", "Integrated Assignment Environment (IAE) v1.0\n\nDeveloped as part of CE316 Project\n\nFeatures:\n- Project and Configuration Management\n- Automatic Testing of Student Submissions\n- JSON-based Save & Load\n")
@@ -315,7 +317,23 @@ class ConfigFrame(tk.Frame):
         self.controller = controller
         self.selected_language = tk.StringVar()
 
-        self.language_listbox = tk.Listbox(self, font=FONT, width=30, height=8)
+        self.language_listbox = tk.Listbox(
+            self,
+            font=FONT,
+            width=30,
+            height=8,
+            bg="#eeeeee",
+            fg="#000000",
+            selectbackground="#d0eaff",
+            selectforeground="#000000",
+            bd=2,
+            relief="ridge",
+            highlightthickness=1,
+            highlightbackground="black",
+            highlightcolor="#cccccc",
+            activestyle='none'
+        )
+
         self.language_listbox.pack(pady=20)
         self.language_listbox.bind("<<ListboxSelect>>", self.on_language_select)
 
@@ -329,6 +347,7 @@ class ConfigFrame(tk.Frame):
         self.detail_frame.pack(pady=20)
 
         self.populate_language_list()
+
 
     def populate_language_list(self):
         self.language_listbox.delete(0, tk.END)
