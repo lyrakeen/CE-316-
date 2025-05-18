@@ -6,6 +6,7 @@ import os
 import json
 from shutil import which
 import zipfile
+import sv_ttk
 FONT = ("Segoe UI", 11)
 BG_COLOR = "#f4f4f4"
 BTN_COLOR = "#dcdcdc"
@@ -14,8 +15,9 @@ HOVER_COLOR = "#c0c0c0"
 
 
 def setup_styles():
+    sv_ttk.set_theme("light")  # Sadece bu yeterli
+
     style = ttk.Style()
-    style.theme_use("classic")
     style.configure("Green.TButton",
                     foreground="white",
                     background="#388e3c",
@@ -25,41 +27,25 @@ def setup_styles():
               background=[("active", "#2e7d32"), ("pressed", "#1b5e20")])
     style.configure("TButton", font=("Segoe UI", 11), padding=8)
     style.map("TButton",
-              background=[("active", "#c0c0c0")],
+              background=[("active", HOVER_COLOR)],
               relief=[("pressed", "sunken"), ("!pressed", "flat")])
     style.configure("Treeview.Heading", font=("Segoe UI", 11, "bold"))
     style.configure("Treeview", font=("Segoe UI", 11), rowheight=30)
 
-
 class IAEApp(tk.Tk):
 
     def __init__(self):
+        super().__init__()  # Tk penceresi önce oluşturulmalı
 
-        setup_styles()
+        import sv_ttk
+        sv_ttk.set_theme("light")  # Tema burada uygulanmalı
 
-        super().__init__()
-
-        style = ttk.Style(self)
-        style.theme_use("classic")
-
-        style.configure("Green.TButton",
-                        foreground="white",
-                        background="#388e3c",
-                        font=("Segoe UI", 10, "bold"),
-                        padding=10)
-
-        style.map("Green.TButton",
-                  background=[("active", "#2e7d32"), ("pressed", "#1b5e20")],
-                  foreground=[("disabled", "#cccccc")])
+        setup_styles()  # Tema sonrası stiller uygulanır
 
         self.title("Integrated Assignment Environment (IAE)")
         self.geometry("1200x700")
         self.configure(bg=BG_COLOR)
         self._create_menu()
-
-
-        style.configure("TButton", font=FONT, padding=8)
-        style.map("TButton", background=[("active", HOVER_COLOR)], relief=[("pressed", "sunken"), ("!pressed", "flat")])
 
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
@@ -84,7 +70,6 @@ class IAEApp(tk.Tk):
             btn.pack(pady=30, fill="x", padx=20)
 
         self.show_frame("Project")
-
         self.protocol("WM_DELETE_WINDOW", self.on_close)
 
     def on_close(self):
@@ -96,10 +81,6 @@ class IAEApp(tk.Tk):
         menubar = tk.Menu(self)
 
         file_menu = tk.Menu(menubar, tearoff=0)
-        file_menu.add_command(label="New Project", command=self._not_implemented)
-        file_menu.add_command(label="Open", command=self._not_implemented)
-        file_menu.add_command(label="Save", command=self._not_implemented)
-        file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.quit)
         menubar.add_cascade(label="File", menu=file_menu)
 
@@ -110,14 +91,11 @@ class IAEApp(tk.Tk):
 
         self.config(menu=menubar)
 
-    def _not_implemented(self):
-        messagebox.showinfo("Not Implemented", "This feature is not yet implemented.")
-
     def _show_manual(self):
         manual_window = tk.Toplevel(self)
         manual_window.title("User Manual")
         manual_window.geometry("650x550")
-        manual_window.configure(bg="#d9d5c4")
+        manual_window.configure(bg="#f5f5f5")
 
         manual_text = tk.Text(manual_window, wrap="word", font=FONT)
         manual_text.pack(expand=True, fill="both", padx=10, pady=10)
@@ -148,7 +126,6 @@ TIPS:
 - Python-like languages don’t need compile commands (leave empty).
 """)
         manual_text.configure(state="disabled")
-        manual_text.configure(bg="#d9d5c4")
 
     def _show_about(self):
         messagebox.showinfo("About", "Integrated Assignment Environment (IAE) v1.0\n\nDeveloped as part of CE316 Project\n\nFeatures:\n- Project and Configuration Management\n- Automatic Testing of Student Submissions\n- JSON-based Save & Load\n")
@@ -161,7 +138,7 @@ class ProjectFrame(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent, bg=BG_COLOR)
 
-        tk.Label(self, text="Project Page", font=("Arial", 16), bg=BG_COLOR).pack(pady=20)
+        tk.Label(self, text="Project Page", font=("Caveat", 22), bg=BG_COLOR).pack(pady=20)
         self.entries = {}
         labels = [
             ("Project Name", "project_name"),
@@ -239,35 +216,25 @@ class ProjectFrame(tk.Frame):
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to load project:\n{e}")
 
-
-
     def select_file(self, key):
-
-
-
         if key != "zip_folder":
             file_path = fd.askopenfilename(title=f"Select {key.replace('_', ' ').capitalize()} File")
             if file_path:
                 self.entries[key].config(text=file_path)
             return
 
-
-
-
         popup = tk.Toplevel(self)
         popup.title("Select ZIP Folder and Extraction Folder")
-        popup.geometry("500x200")
-        popup.minsize(500, 200)
+        popup.geometry("400x200")
+        popup.resizable(False, False)
 
         selected_zip_dir = tk.StringVar(value="Not selected")
-
         selected_extract_dir = tk.StringVar(value="Not selected")
 
         def browse_zip_folder():
             path = fd.askdirectory(title="Select Folder Containing ZIP Files")
             if path:
                 selected_zip_dir.set(path)
-
 
         def browse_extract_folder():
             path = fd.askdirectory(title="Select Folder to Extract ZIP Files Into")
@@ -300,22 +267,28 @@ class ProjectFrame(tk.Frame):
             self.entries[key].config(text=extract_root)
             popup.destroy()
 
-        # UI Layout
-        tk.Label(popup, text="Select folder containing ZIP files:").pack(pady=(10, 0))
-        tk.Button(popup, text="Select ZIP Folder", command=browse_zip_folder, width=15).pack()
+        # UI düzeni
+        popup.columnconfigure(0, weight=1)
+        popup.columnconfigure(1, weight=2)
 
-        tk.Label(popup, text="Select folder to extract ZIPs into:").pack(pady=(10, 0))
-        tk.Button(popup, text="Select Output Folder", command=browse_extract_folder, width=15).pack()
+        tk.Label(popup, text="ZIP folder:").grid(row=0, column=0, padx=10, pady=15, sticky="e")
+        tk.Button(popup, text="Browse ZIP Folder", command=browse_zip_folder) \
+            .grid(row=0, column=1, padx=10, ipadx=20, sticky="ew")
+
+        tk.Label(popup, text="Extract to:").grid(row=1, column=0, padx=10, pady=15, sticky="e")
+        tk.Button(popup, text="Browse Output Folder", command=browse_extract_folder) \
+            .grid(row=1, column=1, padx=10, ipadx=20, sticky="ew")
 
         ttk.Button(popup, text="Extract and Confirm",
-                   command=extract_and_close,
-                   style="Green.TButton").pack(pady=15)
+                   command=extract_and_close).grid(row=2, column=0, columnspan=2, pady=30, ipadx=40, padx=20, sticky="ew")
+
 
 class ConfigFrame(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent, bg=BG_COLOR)
         self.controller = controller
         self.selected_language = tk.StringVar()
+        tk.Label(self, text="Configuration", font=("Caveat", 22), bg=BG_COLOR).pack(pady=20)
 
         self.language_listbox = tk.Listbox(
             self,
@@ -521,10 +494,12 @@ class TestFrame(tk.Frame):
         self.project_data = {}
         self.results = []
 
+        tk.Label(self, text="Test", font=("Caveat", 22), bg=BG_COLOR).pack(pady=20)
+
         btn_frame = tk.Frame(self, bg=BG_COLOR)
         btn_frame.pack(pady=10)
         ttk.Button(btn_frame, text="Select Project", command=self.load_project_file).pack(side="left", padx=5)
-        ttk.Button(btn_frame, text="Run All Tests", command=self.run_all_tests, style="Green.TButton").pack(side="left", padx=5)
+        ttk.Button(btn_frame, text="Run All Tests", command=self.run_all_tests).pack(side="left", padx=5)
 
         columns = ("student_id", "compile_status", "run_status", "result")
         self.tree = ttk.Treeview(self, columns=columns, show="headings", height=20)
@@ -584,8 +559,5 @@ class TestFrame(tk.Frame):
 
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    root.withdraw()
-
     app = IAEApp()
     app.mainloop()
