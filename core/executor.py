@@ -5,7 +5,7 @@ import os
 
 def compile_code(compile_command, cwd=None):
     try:
-        result = subprocess.run(compile_command, shell=True, capture_output=True, text=True,cwd=cwd)
+        result = subprocess.run(compile_command, shell=True, capture_output=True, text=True, cwd=cwd)
         if result.returncode == 0:
             print("[✓] Compilation successful.")
             return True, result.stdout
@@ -22,24 +22,32 @@ def run_executable(run_command, input_type="Standard Input", input_file=None, cl
     Executes the program based on input method:
     - If Standard Input: passes input_file as stdin
     - If Command-line Arguments: appends cli_arguments to the run command
+    - If None: runs the command with no input
     """
     try:
-        
-
-        # Giriş ve çıkış akışlarını güvenli şekilde hazırla
-        inp_ctx = open(input_file, 'r') if input_type == "Standard Input" and input_file else nullcontext()
-        out_ctx = open(output_file, 'w') if output_file else nullcontext()
-
-        with inp_ctx as inp, out_ctx as out:
+        if input_type == "None":
             result = subprocess.run(
                 run_command,
                 shell=True,
-                stdin=inp if input_type == "Standard Input" and input_file else None,
-                stdout=out if output_file else None,
+                stdout=open(output_file, 'w') if output_file else None,
                 stderr=subprocess.PIPE,
                 text=True,
                 cwd=cwd
             )
+        else:
+            inp_ctx = open(input_file, 'r') if input_type == "Standard Input" and input_file else nullcontext()
+            out_ctx = open(output_file, 'w') if output_file else nullcontext()
+
+            with inp_ctx as inp, out_ctx as out:
+                result = subprocess.run(
+                    run_command,
+                    shell=True,
+                    stdin=inp if input_type == "Standard Input" and input_file else None,
+                    stdout=out if output_file else None,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    cwd=cwd
+                )
 
         if result.returncode == 0:
             print("[✓] Execution successful.")
@@ -55,10 +63,10 @@ def run_executable(run_command, input_type="Standard Input", input_file=None, cl
 
 def run_all_submissions(config, project_data):
     student_dir = project_data["student_code_dir"]
-    input_file = project_data["input_file"]
-    expected_output_file = project_data["expected_output_file"]
     input_type = project_data.get("input_type", "Standard Input")
     cli_args = project_data.get("cli_arguments", "") if input_type == "Command-line Arguments" else ""
+    input_file = project_data.get("input_file") if input_type == "Standard Input" else None
+    expected_output_file = project_data["expected_output_file"]
     run_template = config["run_command"]
     compile_template = config["compile_command"]
 
@@ -71,7 +79,7 @@ def run_all_submissions(config, project_data):
 
         # 🔎 Kod dosyasını uzantıya göre bul
         main_file = None
-        for ext in [".py", ".c", ".cpp", ".java", ".kt", ".go",".rb",".js",".rs",".kt"]:
+        for ext in [".py", ".c", ".cpp", ".java", ".kt", ".go", ".rb", ".js", ".rs", ".kt"]:
             for fname in os.listdir(student_path):
                 if fname.endswith(ext):
                     main_file = os.path.join(student_path, fname)
@@ -93,34 +101,37 @@ def run_all_submissions(config, project_data):
         print(f"[>] Running for {student_id}: {run_cmd}")
 
         # ✅ Derle
-        success, compile_log = compile_code(compile_cmd,cwd=student_path)
+        success, compile_log = compile_code(compile_cmd, cwd=student_path)
         if not success:
             print(f"[✗] {student_id}: Compile Failed")
             results.append((student_id, "Compile Failed", "-", "-"))
             continue
-        
+
         # ✅ Çalıştır
         output_file = os.path.join(student_path, "output.txt")
-        success, run_log = run_executable(run_cmd, input_type, input_file, cli_args, output_file,cwd=student_path)
+        success, run_log = run_executable(run_cmd, input_type, input_file, cli_args, output_file, cwd=student_path)
         if not success:
             print(f"[✗] {student_id}: Runtime Error")
             results.append((student_id, "Compiled", "Runtime Error", "-"))
             continue
 
         # ✅ Çıktı karşılaştır
-        with open(output_file, 'r') as out_f, open(expected_output_file, 'r') as exp_f:
-            student_output = out_f.read().strip()
-            expected_output = exp_f.read().strip()
-            if student_output == expected_output:
-                print(f"[✓] {student_id}: Passed")
-                results.append((student_id, "Compiled", "Executed", "Passed"))
-            else:
-                print(f"[✗] {student_id}: Wrong Output")
-                results.append((student_id, "Compiled", "Executed", "Wrong Output"))
+        try:
+            with open(output_file, 'r') as out_f, open(expected_output_file, 'r') as exp_f:
+                student_output = out_f.read().strip()
+                expected_output = exp_f.read().strip()
+                if student_output == expected_output:
+                    print(f"[✓] {student_id}: Passed")
+                    results.append((student_id, "Compiled", "Executed", "Passed"))
+                else:
+                    print(f"[✗] {student_id}: Wrong Output")
+                    results.append((student_id, "Compiled", "Executed", "Wrong Output"))
+        except Exception as e:
+            print(f"[!] Output Comparison Error: {e}")
+            results.append((student_id, "Compiled", "Executed", "Output Error"))
 
     print("\n[!] Note: Make sure to use '{main_file}' in your config file for full compatibility.")
     return results
-
 
 def normalize_output(path):
     with open(path, "r", encoding="utf-8") as f:

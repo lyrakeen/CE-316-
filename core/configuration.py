@@ -1,8 +1,6 @@
 import json
 import os
 
-
-# Mevcut dil yapılarını güncelle (main_file -> dinamik, main_dir -> çalışma dizini için Java gibi)
 POPULAR_LANGUAGES = {
     "C": {
         "compile_command": "gcc {main_file} -o {main_dir}/a.out",
@@ -42,8 +40,8 @@ POPULAR_LANGUAGES = {
     }
 }
 
+
 def load_configuration(file_path):
-    # Eğer 'configs' zaten dosya yolunda yoksa, ekle
     if not os.path.isabs(file_path) and "configs" not in file_path:
         file_path = os.path.join("configs", file_path)
 
@@ -54,19 +52,29 @@ def load_configuration(file_path):
     try:
         with open(file_path, 'r') as file:
             config = json.load(file)
+
+        # config_name yoksa dosya adından türet
+        if "config_name" not in config:
+            config["config_name"] = os.path.splitext(os.path.basename(file_path))[0]
+
         return config
     except json.JSONDecodeError:
         print(f"[!] Configuration file is not a valid JSON: {file_path}")
         return None
 
+
 def save_configuration(config_data, file_path):
     try:
+        # config_name eksikse dosya adından belirle
+        if "config_name" not in config_data:
+            config_data["config_name"] = os.path.splitext(os.path.basename(file_path))[0]
+
         with open(file_path, 'w') as file:
             json.dump(config_data, file, indent=4)
+
         print(f"[✓] Configuration saved to {file_path}")
     except Exception as e:
         print(f"[!] Failed to save configuration: {e}")
-
 
 
 def list_config_files(config_dir="configs"):
@@ -74,4 +82,3 @@ def list_config_files(config_dir="configs"):
     if not os.path.exists(config_dir):
         os.makedirs(config_dir)
     return [f for f in os.listdir(config_dir) if f.endswith(".json")]
-

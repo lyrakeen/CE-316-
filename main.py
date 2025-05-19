@@ -35,12 +35,12 @@ def setup_styles():
 class IAEApp(tk.Tk):
 
     def __init__(self):
-        super().__init__()  # Tk penceresi önce oluşturulmalı
+        super().__init__()
 
         import sv_ttk
-        sv_ttk.set_theme("light")  # Tema burada uygulanmalı
+        sv_ttk.set_theme("light")
 
-        setup_styles()  # Tema sonrası stiller uygulanır
+        setup_styles()
 
         self.title("Integrated Assignment Environment (IAE)")
         self.geometry("1200x700")
@@ -199,20 +199,19 @@ class ProjectFrame(tk.Frame):
                     btn = ttk.Button(row, text="Select File", command=lambda k=key: self.select_file(k), width=50)
                     btn.pack(side="left", padx=10)
                 self.entries[key] = btn
-            
+
             elif key == "input_type":
                 self.input_type_combo = ttk.Combobox(row, width=30, state="readonly")
-                valid_values = ["Standard Input", "Command-line Arguments"]
+                valid_values = ["Standard Input", "Command-line Arguments", "None"]
                 self.input_type_combo['values'] = valid_values
                 self.input_type_combo.pack(side="left", padx=10)
                 self.input_type_combo.current(0)
                 self.entries[key] = self.input_type_combo
 
-                # === CLI Args Entry ===
-                self.cli_args_entry = ttk.Entry(self, width=40)
+                self.cli_args_entry = ttk.Entry(row, width=30, foreground="gray")
+                self.cli_args_entry.insert(0, "Enter CLI arguments here...")
                 self.cli_args_entry.pack_forget()
 
-                # === Placeholder davranışı ===
                 def clear_placeholder(event):
                     if self.cli_args_entry.get() == "Enter CLI arguments here...":
                         self.cli_args_entry.delete(0, tk.END)
@@ -223,12 +222,9 @@ class ProjectFrame(tk.Frame):
                         self.cli_args_entry.insert(0, "Enter CLI arguments here...")
                         self.cli_args_entry.config(foreground="gray")
 
-                self.cli_args_entry.insert(0, "Enter CLI arguments here...")
-                self.cli_args_entry.config(foreground="gray")
                 self.cli_args_entry.bind("<FocusIn>", clear_placeholder)
                 self.cli_args_entry.bind("<FocusOut>", add_placeholder)
 
-                # === Input Type değişince CLI alanını göster/gizle ===
                 def toggle_cli_args(event=None):
                     if self.input_type_combo.get() == "Command-line Arguments":
                          self.cli_args_entry.pack(pady=5)
@@ -292,15 +288,15 @@ class ProjectFrame(tk.Frame):
     
                 self.entries["zip_folder"].config(text=project_data.get("zip_folder", "Select Folder"))
                 input_type_value = project_data.get("input_type", "Standard Input")
-                valid_input_types = ["Standard Input", "Command-line Arguments"]
-                
+                valid_input_types = ["Standard Input", "Command-line Arguments", "None"]
+
                 if input_type_value not in valid_input_types:
                     messagebox.showwarning(
                         "Invalid Input Type",
                         f"'{input_type_value}' is not a valid input type.\nDefaulting to 'Standard Input'."
                     )
                     input_type_value = "Standard Input"
-                
+
                 self.entries["input_type"].set(input_type_value)
                 
                 # CLI alanı duruma göre gösterilsin
@@ -334,6 +330,7 @@ class ProjectFrame(tk.Frame):
         popup.title("Select ZIP Folder and Extraction Folder")
         popup.geometry("400x200")
         popup.resizable(False, False)
+        popup.attributes('-topmost', True)
 
         selected_zip_dir = tk.StringVar(value="Not selected")
         selected_extract_dir = tk.StringVar(value="Not selected")
@@ -367,10 +364,8 @@ class ProjectFrame(tk.Frame):
                 os.makedirs(extract_to, exist_ok=True)
                 try:
                    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                        # Zip içindeki tüm dosya yollarını al
                         top_level_names = set(p.split('/')[0] for p in zip_ref.namelist() if '/' in p)
-                        
-                        # Eğer sadece tek bir üst klasör varsa, onu doğrudan öğrenci klasörüne çıkar
+
                         if len(top_level_names) == 1:
                             temp_extract = os.path.join(extract_to, '__temp__')
                             zip_ref.extractall(temp_extract)
@@ -441,11 +436,71 @@ class ConfigFrame(tk.Frame):
         ttk.Button(btn_frame, text="Edit Selected", command=self.edit_selected_config).pack(side="left", padx=5)
         ttk.Button(btn_frame, text="Delete Selected", command=self.delete_selected_config).pack(side="left", padx=5)
 
+        io_frame = tk.Frame(self, bg=BG_COLOR)
+        io_frame.pack(pady=5)
+        ttk.Button(io_frame, text="Import JSON", command=self.import_config).pack(side="left", padx=5)
+        ttk.Button(io_frame, text="Export Selected", command=self.export_config).pack(side="left", padx=5)
+
         self.detail_frame = tk.Frame(self, bg=BG_COLOR)
         self.detail_frame.pack(pady=20)
 
         self.populate_language_list()
 
+    def import_config(self):
+        file_path = fd.askopenfilename(
+            title="Import Configuration JSON",
+            filetypes=[("JSON Files", "*.json")]
+        )
+        if not file_path:
+            return
+
+        try:
+            with open(file_path, 'r') as f:
+                json.load(f)
+
+            original_name = os.path.basename(file_path)
+            dest_dir = "configs"
+            os.makedirs(dest_dir, exist_ok=True)
+            dest_path = os.path.join(dest_dir, original_name)
+
+            if os.path.exists(dest_path):
+                overwrite = messagebox.askyesno(
+                    "File Exists",
+                    f"'{original_name}' already exists in configs.\nDo you want to overwrite it?"
+                )
+                if not overwrite:
+                    return
+
+            with open(file_path, 'rb') as src, open(dest_path, 'wb') as dst:
+                dst.write(src.read())
+
+            self.populate_language_list()
+            messagebox.showinfo("Imported", f"Configuration imported as:\n{original_name}")
+
+        except json.JSONDecodeError:
+            messagebox.showerror("Invalid JSON", "The selected file is not a valid JSON file.")
+        except Exception as e:
+            messagebox.showerror("Import Error", f"Failed to import configuration:\n{e}")
+
+    def export_config(self):
+        selection = self.language_listbox.curselection()
+        if not selection:
+            messagebox.showwarning("No Selection", "Please select a configuration to export.")
+            return
+
+        config_name = self.language_listbox.get(selection[0])
+        src_path = os.path.join("configs", f"{config_name}.json")
+
+        dest_path = fd.asksaveasfilename(defaultextension=".json", title="Export Configuration As")
+        if not dest_path:
+            return
+
+        try:
+            with open(src_path, 'r') as src, open(dest_path, 'w') as dst:
+                dst.write(src.read())
+            messagebox.showinfo("Exported", f"Configuration exported to:\n{dest_path}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to export configuration:\n{e}")
 
     def populate_language_list(self):
         self.language_listbox.delete(0, tk.END)
@@ -509,6 +564,7 @@ class ConfigFrame(tk.Frame):
 class AddConfigWindow(tk.Toplevel):
     def __init__(self, master, existing_config=None, original_name=None):
         super().__init__(master)
+
         self.title("Edit Configuration" if existing_config else "Add New Configuration")
         self.geometry("500x450")
         self.master = master
@@ -516,6 +572,17 @@ class AddConfigWindow(tk.Toplevel):
         self.original_name = original_name
 
         self.entries = {}
+
+        row_name = tk.Frame(self, bg=BG_COLOR)
+        row_name.pack(pady=10, padx=20, anchor="w")
+        tk.Label(row_name, text="Config Name:", font=FONT, bg=BG_COLOR, width=18, anchor="e").pack(side="left")
+        self.config_name_entry = ttk.Entry(row_name, width=40)
+        self.config_name_entry.pack(side="left")
+
+        if existing_config and original_name:
+            self.config_name_entry.insert(0, original_name)
+
+
         row = tk.Frame(self, bg=BG_COLOR)
         row.pack(pady=10, padx=20, anchor="w")
         tk.Label(row, text="Language:", font=FONT, bg=BG_COLOR, width=18, anchor="e").pack(side="left")
@@ -523,10 +590,8 @@ class AddConfigWindow(tk.Toplevel):
         self.language_combo.pack(side="left")
         if existing_config:
             self.language_combo.set(existing_config.get("language", ""))
-            self.language_combo.config(state="disabled")
         else:
             self.language_combo.bind("<<ComboboxSelected>>", self.autofill_fields)
-
 
         for key in ["compile_command", "run_command"]:
             row = tk.Frame(self, bg=BG_COLOR)
@@ -540,12 +605,10 @@ class AddConfigWindow(tk.Toplevel):
         if existing_config:
             for key in self.entries:
                 value = existing_config.get(key, "")
-                if isinstance(self.entries[key], ttk.Combobox):
-                    self.entries[key].set(value)
-                else:
-                    self.entries[key].insert(0, value)
+                self.entries[key].insert(0, value)
 
         ttk.Button(self, text="Save Configuration", command=self.save_new_config).pack(pady=20)
+
 
     def autofill_fields(self, event):
         lang = self.language_combo.get()
@@ -557,42 +620,46 @@ class AddConfigWindow(tk.Toplevel):
                     self.entries[key].insert(0, val)
 
     def save_new_config(self):
+        config_name = self.config_name_entry.get().strip()
+        if not config_name:
+            messagebox.showerror("Missing Info", "Please enter a config name.")
+            return
+
         language = self.language_combo.get()
         if not language:
             messagebox.showerror("Missing Info", "Please select a language.")
             return
-    
+
         compile_cmd = self.entries["compile_command"].get()
         run_cmd = self.entries["run_command"].get()
-    
+
         for cmd in [compile_cmd, run_cmd]:
             if cmd.strip():
                 first_word = cmd.strip().split()[0]
                 if which(first_word) is None:
                     self.show_tool_error(first_word)
                     return
-    
+
         data = {
+            "config_name": config_name,
             "language": language,
             "compile_command": compile_cmd,
             "run_command": run_cmd
         }
-    
-        safe_name = language.lower().replace(" ", "_")
+
+        safe_name = config_name.lower().replace(" ", "_")
         file_path = os.path.join("configs", f"{safe_name}.json")
-    
+
         if self.original_name and self.original_name.lower() != safe_name:
             try:
                 os.remove(os.path.join("configs", f"{self.original_name.lower()}.json"))
             except FileNotFoundError:
                 pass
-    
+
         save_configuration(data, file_path)
         self.master.populate_language_list()
         messagebox.showinfo("Saved", f"Configuration saved as {file_path}")
         self.destroy()
-
-
 
     def show_tool_error(self, tool):
         help_message = (
@@ -672,15 +739,13 @@ class TestFrame(tk.Frame):
         config = load_configuration(config_path)
     
         results = run_all_submissions(config, self.project_data)
-        # 2. Treeview'ı temizle
         for item in self.tree.get_children():
             self.tree.delete(item)
 
-        # 3. Yeni sonuçları ekle
         for student_id, compile_status, run_status, result in results:
             self.tree.insert("", "end", values=(student_id, compile_status, run_status, result))
         self.results = results
-    
+
 
 if __name__ == "__main__":
     app = IAEApp()

@@ -1,4 +1,5 @@
 {
+    "config_name": "java",
     "language": "Java",
     "compile_command": "javac -d {main_dir} {main_file}",
     "run_command": "java -cp {main_dir} Main"
