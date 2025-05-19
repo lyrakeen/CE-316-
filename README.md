@@ -11,6 +11,8 @@ It allows lecturers to compile, run, and test student submissions via custom con
 - Real-time result table (compile, run, compare status)
 - Config edit/delete and multi-config support per language
 - Input/Output file handling with .txt files
+- Test result persistence (saved inside .json project files)
+
 
 
 ## 🧪 How It Works
@@ -30,6 +32,7 @@ It allows lecturers to compile, run, and test student submissions via custom con
 - Load project and run tests on all student submissions.
 - Results are displayed instantly (compile/run/output match).
 - Supports languages that require multiple class files (Java) as well as interpreted languages (Python).
+- - Test results are saved inside the project file (JSON) and can be viewed later after reloading the project.
 
 ## 📁 Folder Structure
 - `/configs`: Configuration files (.json)
@@ -44,9 +47,5 @@ Run: `java MainClass`
 **Python**  
 Compile: *(leave empty)*  
 Run: `python main.py`
-
-
 ---
-
-
 > This project is building as part of CE316 coursework.
