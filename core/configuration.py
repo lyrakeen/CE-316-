@@ -1,53 +1,47 @@
 import json
 import os
 
+
+# Mevcut dil yapılarını güncelle (main_file -> dinamik, main_dir -> çalışma dizini için Java gibi)
 POPULAR_LANGUAGES = {
     "C": {
-        "compile_command": "gcc main.c -o main",
-        "run_command": "./main",
-        "input_type": "Standard Input"
+        "compile_command": "gcc {main_file} -o {main_dir}/a.out",
+        "run_command": "{main_dir}/a.out"
     },
     "C++": {
-        "compile_command": "g++ main.cpp -o main",
-        "run_command": "./main",
-        "input_type": "Standard Input"
+        "compile_command": "g++ {main_file} -o {main_dir}/a.out",
+        "run_command": "{main_dir}/a.out"
     },
     "Java": {
-        "compile_command": "javac Main.java",
-        "run_command": "java Main",
-        "input_type": "Standard Input"
+        "compile_command": "javac -d {main_dir} {main_file}",
+        "run_command": "java -cp {main_dir} Main"
     },
     "Python": {
-        "compile_command": "python3 -m py_compile main.py",
-        "run_command": "python3 main.py",
-        "input_type": "Standard Input"
+        "compile_command": "python -m py_compile {main_file}",
+        "run_command": "python {main_file}"
     },
     "Go": {
-        "compile_command": "go build main.go",
-        "run_command": "./main",
-        "input_type": "Standard Input"
+        "compile_command": "go build -o {main_dir}/app {main_file}",
+        "run_command": "{main_dir}/app"
     },
     "Ruby": {
-        "compile_command": "ruby -c main.rb",
-        "run_command": "ruby main.rb",
-        "input_type": "Standard Input"
+        "compile_command": "ruby -c {main_file}",
+        "run_command": "ruby {main_file}"
     },
     "Node.js": {
-        "compile_command": "node --check main.js",
-        "run_command": "node main.js",
-        "input_type": "Standard Input"
+        "compile_command": "node --check {main_file}",
+        "run_command": "node {main_file}"
     },
     "Rust": {
-        "compile_command": "rustc main.rs",
-        "run_command": "./main",
-        "input_type": "Standard Input"
+        "compile_command": "rustc {main_file} -o {main_dir}/main",
+        "run_command": "{main_dir}/main"
     },
     "Kotlin": {
-        "compile_command": "kotlinc main.kt -include-runtime -d main.jar",
-        "run_command": "java -jar main.jar",
-        "input_type": "Standard Input"
+        "compile_command": "kotlinc {main_file} -include-runtime -d {main_dir}/main.jar",
+        "run_command": "java -jar {main_dir}/main.jar"
     }
 }
+
 def load_configuration(file_path):
     # Eğer 'configs' zaten dosya yolunda yoksa, ekle
     if not os.path.isabs(file_path) and "configs" not in file_path:

@@ -1,9 +1,5 @@
 {
     "language": "Java",
-    "compile_command": "javac Main.java",
-    "run_command": "java Main",
-    "input_type": "Standard Input",
-    "input_file": "",
-    "expected_output_file": "",
-    "compare_command": "diff output.txt expected.txt"
+    "compile_command": "javac -d {main_dir} {main_file}",
+    "run_command": "java -cp {main_dir} Main"
 }
