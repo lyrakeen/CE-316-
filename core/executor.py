@@ -2,7 +2,7 @@ import subprocess
 from contextlib import nullcontext
 from core.configuration import load_configuration
 import os
-
+import json
 def compile_code(compile_command, cwd=None):
     try:
         result = subprocess.run(compile_command, shell=True, capture_output=True, text=True, cwd=cwd)
@@ -77,7 +77,7 @@ def run_all_submissions(config, project_data):
         if not os.path.isdir(student_path):
             continue
 
-        # 🔎 Kod dosyasını uzantıya göre bul
+       
         main_file = None
         for ext in [".py", ".c", ".cpp", ".java", ".kt", ".go", ".rb", ".js", ".rs", ".kt"]:
             for fname in os.listdir(student_path):
@@ -92,7 +92,7 @@ def run_all_submissions(config, project_data):
             results.append((student_id, "Missing File", "-", "-"))
             continue
 
-        # 🔧 Komutları oluştur
+       
         compile_cmd = compile_template.replace("{main_file}", f"\"{main_file}\"")
         run_cmd = run_template.replace("{main_file}", f"\"{main_file}\"")
         if input_type == "Command-line Arguments" and cli_args.strip():
@@ -100,14 +100,13 @@ def run_all_submissions(config, project_data):
 
         print(f"[>] Running for {student_id}: {run_cmd}")
 
-        # ✅ Derle
+       
         success, compile_log = compile_code(compile_cmd, cwd=student_path)
         if not success:
             print(f"[✗] {student_id}: Compile Failed")
             results.append((student_id, "Compile Failed", "-", "-"))
             continue
 
-        # ✅ Çalıştır
         output_file = os.path.join(student_path, "output.txt")
         success, run_log = run_executable(run_cmd, input_type, input_file, cli_args, output_file, cwd=student_path)
         if not success:
@@ -115,7 +114,7 @@ def run_all_submissions(config, project_data):
             results.append((student_id, "Compiled", "Runtime Error", "-"))
             continue
 
-        # ✅ Çıktı karşılaştır
+      
         try:
             with open(output_file, 'r') as out_f, open(expected_output_file, 'r') as exp_f:
                 student_output = out_f.read().strip()
@@ -132,6 +131,21 @@ def run_all_submissions(config, project_data):
 
     print("\n[!] Note: Make sure to use '{main_file}' in your config file for full compatibility.")
     return results
+
+
+def save_results_to_project(project_path, results):
+    try:
+        with open(project_path, 'r') as f:
+            project_data = json.load(f)
+
+        project_data["results"] = results
+
+        with open(project_path, 'w') as f:
+            json.dump(project_data, f, indent=4)
+
+        print("[✓] Results saved to project file.")
+    except Exception as e:
+        print(f"[✗] Failed to save results: {e}")
 
 def normalize_output(path):
     with open(path, "r", encoding="utf-8") as f:

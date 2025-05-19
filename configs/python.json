@@ -1,0 +1,6 @@
+{
+    "config_name": "python",
+    "language": "Python",
+    "compile_command": "python -m py_compile {main_file}",
+    "run_command": "python {main_file}"
+}

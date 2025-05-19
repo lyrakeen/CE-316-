@@ -715,6 +715,15 @@ class TestFrame(tk.Frame):
                     return
 
                 self.project_data["student_code_dir"] = student_dir
+                self.project_data["project_file_path"] = file_path
+
+            
+                self.results = self.project_data.get("results", [])
+                for item in self.tree.get_children():
+                    self.tree.delete(item)
+
+                for student_id, compile_status, run_status, result in self.results:
+                    self.tree.insert("", "end", values=(student_id, compile_status, run_status, result))    
 
                 messagebox.showinfo("Loaded", f"Project loaded:\n{file_path}\n\nStudent codes from:\n{student_dir}")
 
@@ -745,6 +754,12 @@ class TestFrame(tk.Frame):
         for student_id, compile_status, run_status, result in results:
             self.tree.insert("", "end", values=(student_id, compile_status, run_status, result))
         self.results = results
+            
+        if "project_file_path" in self.project_data:
+            from core.executor import save_results_to_project
+            save_results_to_project(self.project_data["project_file_path"], results)
+        else:
+            print("[!] Project path not stored. Cannot update results in project file.")
 
 
 if __name__ == "__main__":
